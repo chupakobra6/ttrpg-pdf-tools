@@ -5,14 +5,17 @@ import argparse
 import time
 from pathlib import Path
 
-from pdf_form_editor import PdfFormEditor
+if __package__:
+    from .pdf_form_editor import PdfFormEditor
+else:
+    from pdf_form_editor import PdfFormEditor
 
 
 def run_once(input_pdf: Path, autosize_mode: str, output_pdf: Path | None = None) -> int:
     editor = PdfFormEditor(input_pdf)
     try:
         updated = editor.autosize_text_fields(autosize_mode)
-        if updated > 0:
+        if updated > 0 or output_pdf is not None:
             editor.save(output_pdf)
         return updated
     finally:
@@ -189,7 +192,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--watch-dir",
         type=Path,
-        help="Watch a directory and autosize any changed PDF inside it in place.",
+        help="Watch PDFs in a directory and write copies to .autosized or --out-dir.",
     )
     parser.add_argument(
         "--watch-interval",

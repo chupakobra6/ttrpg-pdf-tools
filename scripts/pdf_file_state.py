@@ -51,7 +51,7 @@ def require_version(path: Path, expected: str | None) -> None:
 @contextmanager
 def locked_files(*paths: Path) -> Iterator[None]:
     # A stable sidecar survives os.replace. Never unlink it: waiters may hold its inode.
-    lock_dir = Path.home() / '.cache' / 'pf2e_pdf_tools' / 'locks'
+    lock_dir = Path.home() / '.cache' / 'ttrpg-pdf-tools' / 'locks'
     lock_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     with ExitStack() as stack:
         for path in sorted({p.resolve() for p in paths}):

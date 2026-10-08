@@ -913,8 +913,8 @@ class PdfFormEditor:
                     FieldInfo(
                         name=field_name,
                         field_type=ref.field_type,
-                        value=self.field_value(field_name),
-                        checked=self.checkbox_checked(field_name),
+                        value=self.field_value(RAW_FIELD_PREFIX + field_name),
+                        checked=self.checkbox_checked(RAW_FIELD_PREFIX + field_name),
                         font_size=float(getattr(ref.widget, "text_fontsize", 12.0) or 12.0),
                         page_number=ref.page_number,
                         x0=ref.x0,

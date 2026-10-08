@@ -1,5 +1,5 @@
 [project]
-name = "pf2e-pdf-tools"
+name = "ttrpg-pdf-tools"
 version = "0.1.0"
 description = "Utilities for editing fillable TTRPG character sheet PDFs without breaking form state."
 readme = "README.md"

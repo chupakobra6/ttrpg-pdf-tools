@@ -1,224 +1,76 @@
-# pf2e-pdf-tools
+# ttrpg-pdf-tools
 
-Toolkit for editing fillable TTRPG character sheet PDFs without breaking form rendering.
+Инструменты для PDF настольных ролевых игр (НРИ): заполнение листов персонажей, подбор размера текста, вставка изображений и подготовка копий для iPhone/iPad. Общее ядро работает с полями PDF; особенности Pathfinder 2e и локализованных D&D-листов определяются по содержимому шаблона.
 
-The project exists because these PDFs keep state in two places at once:
-- page widgets,
-- `AcroForm /Fields`.
+PDF хранит значения в видимых полях страницы (widgets) и в структуре `AcroForm /Fields`. Редактор обновляет оба слоя, чтобы значения и флажки сохранялись при повторном открытии в разных просмотрщиках.
 
-If you update only one layer, different viewers start disagreeing. Text may look fine in one app and disappear in another, or saving in Preview may flatten or destroy the form state.
+## Быстрый запуск
 
-This repo keeps those layers in sync and provides a safer editing workflow.
-
-## At a glance
-
-- safe editing for Pathfinder 2e and D&D 5e fillable sheets
-- one core engine for field updates, autosize, image insertion, and form synchronization
-- one final delivery command that produces iPhone/iPad-safe image-only copies and can send them to Saved Messages
-- local web UI for page-based editing on top of rendered PDF pages
-- `uv`-managed environment with a checked-in lockfile
-- canonical public templates in `templates/`
-- private local files isolated in `templates/local/`
-
-## Screenshots
-
-### Visual editor
-
-<img src="docs/images/web-editor.png" alt="Visual editor screenshot" width="1000">
-
-### Rendered output
-
-<img src="docs/images/demo-sheet-page1.png" alt="Rendered PDF output" width="760">
-
-## Highlights
-
-- Keeps page widgets and `AcroForm /Fields` synchronized.
-- Normalizes unsupported punctuation such as curly quotes, long dashes, and bullet glyphs to PDF-safe text before writing field values.
-- Autosizes text without rewriting field values or checkboxes.
-- Provides a local visual editor for direct page-based form editing.
-- Detects image/button fields and supports uploading portraits or other artwork through the web editor.
-- Handles image/button widgets through the toolbar upload controls instead of rendering them as page text overlays.
-- Works with the canonical Pathfinder 2e base and with tracked D&D templates in `templates/`.
-
-## Template-specific notes
-
-- `templates/RM_CharacterSheet_Fillable.pdf`
-  Pathfinder 2e canonical base for rebuilds, repair work, and field-level editing.
-
-- `templates/DnD_5E_CharacterSheet_Form_Fillable_ru.pdf`
-  D&D 5e 2014 Russian sheet.
-  Supports text, checkboxes, and image/button fields.
-  Verified image slots include `CHARACTER IMAGE` and `Faction Symbol Image`.
-  This localized template has mismatched internal skill field names versus the printed Russian skill labels.
-  `PdfFormEditor` now detects this template profile and remaps skill values and skill proficiency checkboxes to the visible rows automatically when you use logical D&D skill names.
-
-- `templates/DnD_2024_Character-Sheet-Fillable-RUS.pdf`
-  D&D 2024 Russian sheet.
-  Supports text and checkboxes through the same tooling.
-  The printed rows line up correctly, but the underlying PDF uses anonymous field ids like
-  `text_69...` and `checkbox_128...` instead of meaningful names.
-  `PdfFormEditor` now detects this template too and remaps logical D&D skill names and skill
-  proficiency checkboxes to the right raw fields automatically.
-  No image/button portrait slots are currently exposed by this template, so the web editor has no image-upload target there.
-
-- Static printed text that is baked into a PDF background is not editable through the form tools.
-  The editor only changes actual fillable PDF fields and detected image/button widgets.
-
-## Repository layout
-
-- `scripts/pdf_form_editor.py`
-  Generic editor for fillable PDF forms.
-  Updates visible widget state and structural form values together.
-
-- `scripts/pdf_form_tool.py`
-  Autosize-only CLI.
-  Changes font sizing and appearance only.
-  Does not rewrite field values or checkboxes.
-
-- `scripts/pdf_form_web_editor.py`
-  Local visual web editor for PDF forms.
-  Renders page images with editable text fields and checkboxes overlaid on top.
-  Supports image upload for detected PDF button/image fields.
-
-- `scripts/pdf_delivery.py`
-  Canonical final step for player-facing PDFs.
-  Preserves the editable source and creates a validated 300-DPI image-only copy with no PDF forms, fonts, transparency, or annotations.
-  With `--send-saved`, sends the result to `@Pheik13` Saved Messages through the sibling Telegram Harvest helper and verifies filename, MIME type, and byte size from the sent message.
-
-- `templates/`
-  Public PDF templates and reference sheets tracked in the repository.
-
-- `templates/RM_CharacterSheet_Fillable.pdf`
-  Canonical Pathfinder 2e fillable base used for rebuilds and repair work.
-
-- `templates/DnD_5E_CharacterSheet_Form_Fillable_ru.pdf`
-  Russian D&D 5e fillable sheet supported by the same editor and autosize pipeline.
-
-- `templates/local/`
-  Private local template directory.
-  Files placed there are ignored by git and stay off GitHub.
-
-## Why this exists
-
-Standard viewers are unreliable for this sheet:
-- macOS Preview can destroy or flatten form data on save.
-- IDE PDF viewers often display forms but do not persist edits correctly.
-- browser viewers may render fields differently from Acrobat-compatible tools.
-
-This project gives you a controlled path:
-1. edit with the provided tools,
-2. autosize once,
-3. verify the editable source,
-4. prepare the iPhone/iPad delivery copy and optionally send it through Telegram Harvest.
-
-## Quick start
-
-Requirements:
-- Python `3.10+`
-- `uv`
-- Chromium via Playwright only if you want automated browser screenshots
-
-First-time setup after cloning:
+Нужны Python 3.10+ и `uv`. Открытие браузера через `--open-browser` рассчитано на macOS с Google Chrome; на другой системе открой показанный локальный URL вручную.
 
 ```bash
-git clone <repo-url>
-cd pf2e_pdf_tools
-uv sync
+git clone https://github.com/chupakobra6/ttrpg-pdf-tools.git
+cd ttrpg-pdf-tools
+uv sync --locked
+
+# Работай с копией, сохраняя исходный шаблон.
+cp templates/pathfinder-2e/RM_CharacterSheet_Fillable.pdf templates/local/my-character.pdf
+uv run python scripts/pdf_form_web_editor.py templates/local/my-character.pdf --open-browser
 ```
 
-Create or sync the project environment:
+Редактируй текст и флажки поверх страниц, затем нажми **Сохранить PDF**. Подбор размера заполненного текста выполняется при каждом сохранении. Кнопка **Сменить PDF** открывает выбор файлов из `templates/local/`; другой корень задаётся через `--picker-dir /path/to/folder`. Кнопка **Открыть PDF** показывает текущий файл в Chrome. Клавиша `f` и кнопка **Скрыть поля** переключают видимость полей поверх страницы.
 
-```bash
-uv sync
-```
+Изображения загружаются через панель сверху, если PDF содержит button/image-поля. При нескольких полях выбери нужное в списке. Печатный фон, списки, радиокнопки и подписи доступны для просмотра; редактор не предлагает их как изменяемый текст. PDF без полей можно просматривать и готовить к доставке, но заполнять его печатный фон этим инструментом нельзя.
 
-You do not need to activate `.venv` manually for normal use. Prefer `uv run ...`.
+После установки среду не нужно активировать вручную: команды запускаются через `uv run`. Если среда повреждена, пересоздай `.venv` командой `uv venv --clear`, затем выполни `uv sync --locked`. Зависимости и их версии хранятся в `pyproject.toml` и `uv.lock`; при их изменении обновляй оба файла через `uv lock`.
 
-Optional, only if you want automated browser screenshots:
+## Каталоги
 
-```bash
-uv sync --extra screenshots
-uv run playwright install chromium
-```
+| Путь | Содержимое |
+| --- | --- |
+| `scripts/` | Общее ядро, CLI, web-редактор и подготовка доставки |
+| `tests/` | Проверки форм, сохранения, конфликтов и доставки |
+| `templates/pathfinder-2e/` | Листы и памятки Pathfinder 2e |
+| `templates/dnd-5e-2014/` | Русский заполняемый лист D&D 5e 2014 |
+| `templates/dnd-5e-2024/` | Русский заполняемый лист D&D 2024 |
+| `templates/homebrew/` | Авторские и адаптированные справочные материалы |
+| `templates/local/` | Личные шаблоны, заполненные листы и рабочие копии; исключены из Git |
+| `docs/images/` | Иллюстрации редактора и результата |
+| `work/` | Временные проверки и рендеры; исключены из Git |
 
-Run the visual editor:
+Публичные PDF входят в репозиторий как исходные материалы. При добавлении другой системы используй `templates/<система>/`. Частные материалы остаются в `templates/local/`, включая вложенные каталоги. Заполненный лист не заменяет исходный шаблон; личные листы и `.venv/` не коммитятся.
 
-```bash
-uv run python scripts/pdf_form_web_editor.py /path/to/file.pdf --open-browser
-```
+## Шаблоны и профили
 
-Run the regression tests:
+| Система | Заполняемый оригинал | Поддержка |
+| --- | --- | --- |
+| Pathfinder 2e | `templates/pathfinder-2e/RM_CharacterSheet_Fillable.pdf` | Текст, флажки, подбор размера и выравнивание компактных числовых строк |
+| D&D 5e 2014 RU | `templates/dnd-5e-2014/DnD_5E_CharacterSheet_Form_Fillable_ru.pdf` | Текст, флажки, изображения `CHARACTER IMAGE` и `Faction Symbol Image`; сопоставление навыков с печатными строками |
+| D&D 2024 RU | `templates/dnd-5e-2024/DnD_2024_Character-Sheet-Fillable-RUS.pdf` | Текст, флажки и сопоставление навыков; поля изображений в этом шаблоне отсутствуют |
 
-```bash
-uv run python -m unittest discover -s tests
-```
+В Pathfinder-каталоге также сохранены `RM_CharacterSheetRus.pdf`, `CharacterSheetRus_A5.pdf`, `Воин.pdf`, `action_sheet_RUS v1.4.1 center.pdf`, `actions_sheet_by_vetal.pdf`, `conditions.pdf`, `conditions_1.0_center.pdf` и `pathfinder sheet 1.0.pdf`. В `homebrew/` находится `Хоубрю по драгонаге.pdf`. Эти исходники сохраняют имена и содержимое; справочный PDF не обязательно содержит редактируемые поля.
 
-Inside the visual editor, use `Сменить PDF` to switch the open file. By default, the picker opens from `templates/local/`. You can override that root with `--picker-dir /path/to/folder`.
-The visual editor now autosizes filled text fields on every save by default. Override with `--autosize none|filled|all` if needed.
-Detected image/button fields are edited through the toolbar selector and file upload at the top of the page, not through inline text overlays.
-Press `f` to hide or show field overlays while previewing the page.
-После переключения PDF, сохранения другой вкладкой или перезапуска сервера старая форма отклоняется с сохранением ввода; порядок продолжения описан в разделе «Сохранение при параллельных правках».
+Другие НРИ используют то же ядро для текстовых полей, флажков и обнаруженных полей изображений. Наличие полей позволяет начать работу, но совместимость конкретного шаблона нужно подтвердить чтением сохранённых значений и просмотром страниц. Профили навыков применяются только к распознанным D&D-шаблонам.
 
-Autosize after editing:
+## Программное заполнение
 
-```bash
-uv run python scripts/pdf_form_tool.py /path/to/file.pdf
-```
-
-Prepare the final iPhone/iPad copy while preserving the editable source:
-
-```bash
-uv run python scripts/pdf_delivery.py /path/to/final-character-sheet.pdf
-```
-
-Prepare several finished PDFs and send the resulting copies to `@Pheik13` Saved Messages:
-
-```bash
-uv run python scripts/pdf_delivery.py \
-  /path/to/character-sheet.pdf \
-  /path/to/player-reference.pdf \
-  --send-saved
-```
-
-The command writes underscore-safe `*_iPhone_iPad.pdf` files into an `iphone-ipad/` directory beside each source. Its fixed delivery profile is 300 DPI and JPEG quality 92. It fails unless every output page is one opaque DeviceRGB image covering the original page, with the same geometry and no forms, fonts, selectable text, transparency, or annotations. Telegram delivery is considered complete only after the helper reads the sent message back and confirms the exact filename, `application/pdf` MIME type, and byte size.
-
-Watch one file:
-
-```bash
-uv run python scripts/pdf_form_tool.py /path/to/file.pdf --watch
-```
-
-Watch a directory:
-
-```bash
-uv run python scripts/pdf_form_tool.py --watch-dir /path/to/folder
-```
-
-Open a tracked template in the web editor:
-
-```bash
-uv run python scripts/pdf_form_web_editor.py \
-  templates/DnD_5E_CharacterSheet_Form_Fillable_ru.pdf \
-  --open-browser
-```
-
-## Minimal API example
+`PdfFormEditor` изменяет значения полей, синхронизирует widgets и `AcroForm /Fields`, вставляет изображения и подбирает размер текста.
 
 ```python
 from pathlib import Path
 from scripts.pdf_form_editor import PdfFormEditor
 
-pdf = Path("/path/to/file.pdf")
-editor = PdfFormEditor(pdf)
-
-editor.set_text("ancestry_name", "Человек")
-editor.set_checkbox("skill_athletics_prof_e", True)
-editor.autosize_text_fields("filled")
-editor.save()
-editor.close()
+editor = PdfFormEditor(Path("templates/local/my-character.pdf"))
+try:
+    editor.set_text("ancestry_name", "Человек")  # Pathfinder 2e
+    editor.set_checkbox("skill_athletics_prof_e", True)
+    editor.autosize_text_fields("filled")
+    editor.save()
+finally:
+    editor.close()
 ```
 
-For the localized D&D sheets, prefer the logical skill helpers instead of raw widget names:
+В D&D 2014 внутренние имена навыков не совпадают с русскими печатными строками. В D&D 2024 поля имеют технические имена вроде `text_69srmm` и `checkbox_128cefr`. Для этих шаблонов используй логические имена навыков:
 
 ```python
 editor.set_skill_values({
@@ -233,86 +85,80 @@ editor.set_skill_proficiencies({
 })
 ```
 
-If you truly need the raw underlying PDF field name, prefix it with `raw:` such as `raw:Performance`
-for the 2014 sheet or `raw:text_69srmm` for the 2024 sheet.
+Для обращения к фактическому имени поля используй `raw:`, например `raw:Performance` в D&D 2014 или `raw:text_69srmm` в D&D 2024. `list_fields()` возвращает фактические поля с их собственными значениями. Web-редактор сохраняет эти имена напрямую, без повторного сопоставления навыков.
 
-## Recommended workflow
+Перед записью неподдерживаемая PDF-пунктуация нормализуется: фигурные кавычки, длинные тире и маркеры заменяются безопасными ASCII-символами. Это не заменяет проверку отображения кириллицы и других символов в выбранном шаблоне.
 
-1. Run `uv sync` after cloning the repository.
-2. Start from `templates/RM_CharacterSheet_Fillable.pdf` if you need a clean Pathfinder rebuild, or from one of the D&D templates if that is your target sheet.
-3. Copy personal working files into `templates/local/` before editing.
-4. Edit fields through `pdf_form_editor.py` or `pdf_form_web_editor.py`.
-5. Run `pdf_form_tool.py` once after content edits.
-6. Verify the editable source visually in Chrome or an Acrobat-compatible viewer.
-7. Run `pdf_delivery.py` on the final sheet and any player reference. Deliver its `*_iPhone_iPad.pdf` outputs by default; keep the editable forms as working originals.
+## Подбор размера текста
 
-## Зависимости
+`pdf_form_tool.py` подбирает размеры текста, сохраняя значения и состояния флажков. Сначала проверяй результат на временной копии.
 
-Канонический способ установки и запуска — `uv`; настройки среды находятся в `pyproject.toml` и `uv.lock`.
+```bash
+uv run python scripts/pdf_form_tool.py templates/local/my-character.pdf
 
-- Use `pyproject.toml` and `uv.lock` as the source of truth for dependencies.
-- Prefer `uv sync` over manual `pip install`.
-- Prefer `uv run ...` over activating the environment by hand.
-- When dependencies change, run `uv lock` and commit `pyproject.toml` and `uv.lock` together.
-- If you already have an older `.venv`, `uv sync` will usually reuse it. If the environment becomes inconsistent, remove `.venv` and run `uv sync` again.
+# Записать отдельную копию, в том числе при отсутствии изменений размера.
+uv run python scripts/pdf_form_tool.py templates/local/my-character.pdf --out-dir work/autosized
 
-## Supported forms
+# Обрабатывать последующие сохранения одного файла.
+uv run python scripts/pdf_form_tool.py templates/local/my-character.pdf --watch
 
-- Pathfinder 2e: canonical rebuild and repair workflow centered on `templates/RM_CharacterSheet_Fillable.pdf`.
-- D&D 5e RU: supported for text editing, autosize, and image upload through the same tools.
-- D&D 2024 RU: supported for text editing and autosize through the same tools.
+# Следить за PDF непосредственно в указанном каталоге.
+uv run python scripts/pdf_form_tool.py --watch-dir templates/local
+```
 
-The editor is generic at the PDF-form level: if a PDF exposes fillable text, checkboxes, and button/image fields, the tooling can usually edit it without viewer-side corruption.
+Режимы `--autosize none|filled|all`: без подбора, только заполненные поля или все текстовые поля. По умолчанию выбран `filled`; web-редактор принимает тот же параметр. Обычный запуск и `--watch` меняют исходник, если не задан `--out-dir`. Для `--watch-dir` результаты по умолчанию находятся в `.autosized/` внутри указанного каталога; `--out-dir` меняет каталог результатов. Интервал наблюдения задаётся через `--watch-interval`.
 
-## Public vs local files
+## Финальная копия для игрока
 
-- Keep public templates and reference PDFs in `templates/`.
-- Keep private variants and filled sheets in `templates/local/`.
-- `templates/local/` is git-ignored by design.
+После заполнения проверь редактируемый оригинал в Chrome или Acrobat-совместимом просмотрщике, затем запусти `pdf_delivery.py` на листе и нужных памятках:
 
-## Git workflow
+```bash
+uv run python scripts/pdf_delivery.py templates/local/my-character.pdf
 
-- Commit dependency changes as a pair: `pyproject.toml` and `uv.lock`.
-- Do not commit `.venv/` or personal filled character sheets.
-- Keep public template PDFs in `templates/` only if they are meant to ship with the repository.
-- Put user-specific working copies in `templates/local/`.
+# Несколько готовых PDF; отправка нужна только по поручению пользователя.
+uv run python scripts/pdf_delivery.py \
+  /path/to/character-sheet.pdf \
+  /path/to/player-reference.pdf \
+  --send-saved
+```
 
-## Do not use
+Команда сохраняет редактируемые исходники и создаёт `*_iPhone_iPad.pdf` в `iphone-ipad/` рядом с каждым из них. Пробелы и дефисы в имени результата заменяются подчёркиваниями. Для общего каталога используй `--out-dir /path/to/output`.
 
-- macOS Preview for saving the working sheet
-- IDE PDF viewers as the source of truth for edits
+Профиль доставки фиксирован: 300 DPI, JPEG quality 92. Проверка требует исходную геометрию страниц и по одному непрозрачному изображению DeviceRGB на страницу. Формы, PDF-шрифты, выделяемый текст, прозрачность и annotations в результате отсутствуют; JPEG проверяется на размеры и допустимую потерю качества. Результат не заменяет редактируемую форму. По умолчанию игроку передаётся копия для iPhone/iPad; исходная форма передаётся по явной просьбе.
 
-## Validation
-
-- Open the output in Chrome or an Acrobat-compatible viewer.
-- Confirm key text fields are visible, not only present in form metadata.
-- Confirm required checkboxes render as checked.
-- On the localized D&D sheets, confirm logical skill updates land on the visible printed rows, not just on the raw internal field ids.
-- Confirm image uploads render inside the expected PDF field when the form includes image/button widgets.
-- If content changed materially, rerun autosize.
-- Run `pdf_delivery.py` before handing off a player-facing character sheet. Its structural checks prevent the viewer-dependent missing-glyph failure caused by non-embedded or custom-encoded PDF fonts.
+`--send-saved` вызывает `main send-saved` из соседнего проекта Telegram Harvest и отправляет только в Saved Messages аккаунта `@Pheik13`. Отправка считается проверенной после чтения сообщения и сверки имени файла, MIME `application/pdf` и размера в байтах. Если helper недоступен, подготовленную копию можно использовать локально. `--caption` задаёт подпись только для одного входного PDF. Правила helper находятся в `../telegram-harvest/AGENTS.md`.
 
 ## Сохранение при параллельных правках
 
-`PdfFormEditor` читает поля и версию из одного снимка PDF. Перед сохранением web-редактор и CLI через общего владельца сверяют содержимое и идентичность исходника. Изменение, удаление или замена файла по прежнему пути отменяет устаревшую запись. Web-форма дополнительно привязана к файлу, вкладочной ревизии и сессии сервера: старый запрос после переключения файла, сохранения другой вкладкой или перезапуска получает HTTP 409.
+`PdfFormEditor` читает поля и версию из одного снимка PDF. Перед записью web-редактор и CLI через `pdf_file_state` сверяют содержимое и идентичность исходника. Изменение, удаление или замена файла по прежнему пути отменяет устаревшую запись. Web-форма дополнительно привязана к файлу, ревизии и сессии сервера: запрос после переключения файла, сохранения другой вкладкой или перезапуска получает HTTP 409.
 
-При отказе web-редактор показывает несохранённые значения и предлагает скачать весь ввод, включая загруженные изображения, в `pdf-unsaved-draft.json`. Открой актуальный PDF в новой вкладке, сравни правки и перенеси нужные; страницу с черновиком оставь открытой до завершения. Поля находятся в `values`, изображения — в `files_base64`; отсутствующий флажок означает снятый. Для программного вызова при `FileConflict` исходный объект `PdfFormEditor` сохраняет ещё не записанные изменения в памяти: прочитай их до `close()` и сопоставь со свежим файлом. Autosize сохраняет значения и флажки, меняя только размеры текста.
+При отказе web-редактор показывает несохранённые значения и предлагает скачать весь ввод с изображениями в `pdf-unsaved-draft.json`. Поля находятся в `values`, изображения в `files_base64`; отсутствующий флажок означает снятый. Открой актуальный PDF в новой вкладке, сравни правки и перенеси нужные. Страницу с черновиком оставь открытой до завершения. При программном `FileConflict` объект `PdfFormEditor` сохраняет изменения в памяти: прочитай их до `close()` и сопоставь со свежим файлом.
 
-Сохранение и экспорт готовят и проверяют временный файл до атомарной замены результата. Экспорт рендерит тот же снимок, который проходит проверку версии; изменение исходника или прежней копии до публикации, отмена либо ошибка подготовки/записи оставляет прежний выход. Редактируемый оригинал экспорт не меняет. Временные файлы операции удаляются после успеха или отказа; внезапное завершение процесса может оставить собственный временный файл, но не частично записанный результат.
+Сохранение и экспорт готовят и проверяют временный файл до атомарной замены. Экспорт рендерит тот же снимок, который проходит проверку версии. Изменение исходника или прежней копии до публикации, отмена либо ошибка подготовки/записи оставляет прежний результат. Временные файлы удаляются после успеха или отказа; внезапное завершение процесса может оставить собственный временный файл, но не частично записанный результат.
 
-Процессы этих инструментов согласуют проверку и замену через `flock` по каноническому пути; файлы блокировки находятся в `~/.cache/pf2e_pdf_tools/locks`. Их нельзя удалять во время работы инструментов: ожидающий процесс может удерживать прежний файл блокировки. Блокировки не требуют записи рядом с исходником, поэтому экспорт поддерживает каталог источника только для чтения. Чтение и рендер снимка не удерживают блокировку на весь долгий экспорт; перед публикацией версия проверяется снова.
+Процессы инструментов согласуют проверку и замену через `flock` по каноническому пути. Файлы блокировки находятся в `~/.cache/ttrpg-pdf-tools/locks`; не удаляй их во время работы, поскольку ожидающий процесс может удерживать прежний inode. Блокировки не требуют записи рядом с исходником: экспорт поддерживает каталог источника только для чтения. Чтение и рендер снимка не удерживают блокировку на весь экспорт; перед публикацией версия проверяется снова.
 
-Сторонний редактор может игнорировать `flock`: изменение до финальной проверки будет обнаружено, но запись такого приложения в коротком промежутке между проверкой и заменой ОС не запрещает. Для полной защиты от этого случая заверши редактирование сторонним приложением перед сохранением или экспортом. Успешный результат описывает опубликованные байты; последующие независимые изменения файла не входят в эту операцию.
+Сторонний редактор может игнорировать `flock`. Изменение до финальной проверки обнаруживается, но ОС не запрещает запись такого приложения между проверкой и заменой. Для полной защиты заверши редактирование сторонним приложением перед сохранением или экспортом. Успешный результат описывает опубликованные байты; последующие независимые изменения файла не входят в эту операцию.
 
-## Troubleshooting
+## Проверка и диагностика
 
-- If Chrome shows the text but Preview destroys it on save, the file is usually fine and Preview is the problem.
-- If an IDE viewer shows edits but the file on disk never changes, the viewer did not persist the form.
-- If text is present in metadata but not visible, run the file through `PdfFormEditor` and then autosize again.
-- If the web editor does not start on a fresh clone, run `uv sync` first instead of installing packages globally.
-- If a PDF has multiple image slots, the web editor lets you choose the target field before upload.
+```bash
+uv run python -m unittest discover -s tests
+```
 
-## Project status
+Проверяй два результата: значения и свойства сохранённой формы, затем вид страниц. Текст должен быть виден на странице, флажки должны отображаться, навыки должны попадать в нужные печатные строки, а изображение в выбранное поле. После существенной правки содержимого повтори подбор размера. Перед передачей PDF игроку запусти `pdf_delivery.py`: его проверки устраняют зависимость копии от нестандартных и невстроенных PDF-шрифтов.
 
-This repo is intentionally small and pragmatic. It is focused on one job:
-editing fillable character sheet PDFs in a way that remains structurally correct across viewers.
+macOS Preview может разрушить или свести форму в изображение при сохранении. Браузерный и IDE-просмотрщики используй для просмотра; правки записывай через инструменты проекта. Если IDE показывает ввод, а файл не меняется, просмотрщик не сохранил форму. Если значения есть в метаданных, но не видны, обработай копию через `PdfFormEditor` и подбор размера, затем проверь страницы. При ошибке первого запуска выполни `uv sync --locked`.
+
+Для автоматических скриншотов доступна отдельная необязательная зависимость:
+
+```bash
+uv sync --extra screenshots
+uv run playwright install chromium
+```
+
+## Примеры результата
+
+<img src="docs/images/web-editor.png" alt="Редактор с полями поверх страниц PDF" width="1000">
+
+<img src="docs/images/demo-sheet-page1.png" alt="Пример заполненного листа Pathfinder 2e" width="760">

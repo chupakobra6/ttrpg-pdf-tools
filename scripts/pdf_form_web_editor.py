@@ -20,7 +20,10 @@ from threading import RLock
 
 import fitz
 
-from pdf_form_editor import FieldInfo, FileConflict, PdfFormEditor
+if __package__:
+    from .pdf_form_editor import FieldInfo, FileConflict, PdfFormEditor, RAW_FIELD_PREFIX
+else:
+    from pdf_form_editor import FieldInfo, FileConflict, PdfFormEditor, RAW_FIELD_PREFIX
 
 
 DEFAULT_SCALE = 1.35
@@ -101,7 +104,7 @@ def html_page(title: str, body: str) -> bytes:
       --line: #d7c5af;
       --accent: #7f3119;
       --accent-2: #564235;
-      --field: rgba(255,255,255,0.82);
+      --field: #fff;
       --field-border: rgba(120, 80, 50, 0.28);
     }}
     * {{ box-sizing: border-box; }}
@@ -248,7 +251,7 @@ def html_page(title: str, body: str) -> bytes:
       margin: 0;
       padding: 0;
       border: 1px solid var(--field-border);
-      background: rgba(255,255,255,0.58);
+      background: var(--field);
       color: #17120d;
       border-radius: 4px;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.32);
@@ -257,7 +260,7 @@ def html_page(title: str, body: str) -> bytes:
     }}
     .field:focus {{
       outline: 2px solid rgba(127, 49, 25, 0.45);
-      background: rgba(255,255,255,0.95);
+      background: var(--field);
       z-index: 5;
     }}
     .field.text {{
@@ -271,7 +274,7 @@ def html_page(title: str, body: str) -> bytes:
     }}
     .field.checkbox {{
       appearance: none;
-      background: rgba(255,255,255,0.7);
+      background: var(--field);
     }}
     .field.checkbox::after {{
       content: "";
@@ -283,7 +286,7 @@ def html_page(title: str, body: str) -> bytes:
       background:
         linear-gradient(135deg, transparent 40%, #1b1712 40%, #1b1712 53%, transparent 53%),
         linear-gradient(45deg, transparent 58%, #1b1712 58%, #1b1712 71%, transparent 71%),
-        rgba(255,255,255,0.92);
+        var(--field);
     }}
     .legend {{
       position: fixed;
@@ -571,7 +574,7 @@ def overlay_font_size(field: FieldInfo, scale: float, height: float, multiline: 
 
 
 def control_html(field: FieldInfo, scale: float) -> str:
-    if field.field_type == "Button":
+    if field.field_type not in ("Text", "CheckBox"):
         return ""
 
     left = field.x0 * scale
@@ -668,7 +671,7 @@ def render_index(
         <input type="hidden" name="expected_session_id" value="{session_id}">
         <div class="topbar">
           <div>
-            <div class="title">PDF Visual Editor</div>
+            <div class="title">Редактор PDF для НРИ</div>
             <div class="meta">{html.escape(str(pdf_path))}</div>
             <div class="meta">Папка выбора PDF: {html.escape(str(picker_root))}</div>
           </div>
@@ -677,12 +680,12 @@ def render_index(
             <button type="button" class="btn secondary" id="toggle-fields">Скрыть поля</button>
             <a class="btn secondary" href="/choose-pdf">Сменить PDF</a>
             <a class="btn secondary" href="/open-pdf">Открыть PDF</a>
-            <button type="submit">Save To PDF</button>
+            <button type="submit">Сохранить PDF</button>
           </div>
         </div>
         {status_html}
         <div class="hintbar">
-          Редактируй поля прямо поверх страницы. PDF в браузере больше не сохраняй вручную: только эта кнопка пишет значения в файл. Портрет можно загрузить через выбор файла сверху.
+          Редактируй текст и флажки поверх страницы и нажми «Сохранить PDF». Изображения загружаются через панель сверху, если шаблон содержит поле изображения. Печатный фон и остальные типы полей доступны для просмотра.
         </div>
         <div class="pages">
           {''.join(page_blocks)}
@@ -698,7 +701,7 @@ def render_index(
       </div>
     </div>
     """
-    return html_page(f"PDF Visual Editor - {pdf_path.name}", body)
+    return html_page(f"Редактор PDF для НРИ - {pdf_path.name}", body)
 
 
 def render_page_png(pdf_path: Path, page_number: int, scale: float) -> bytes:
@@ -772,7 +775,7 @@ def build_handler(state: AppState):
                     return
                 with state.lock:
                     pdf_path = state.pdf_path
-                subprocess.Popen(["open", str(pdf_path)])
+                subprocess.Popen(["open", "-a", "Google Chrome", str(pdf_path)])
                 self._redirect("/")
                 return
             if parsed.path.startswith("/page/") and parsed.path.endswith(".png"):
@@ -822,9 +825,9 @@ def build_handler(state: AppState):
                         f"image_field={image_field_name or '<auto>'}"
                     )
                     for name in text_names:
-                        editor.set_text(name, form.getfirst(f"text:{name}", ""))
+                        editor.set_text(RAW_FIELD_PREFIX + name, form.getfirst(f"text:{name}", ""))
                     for name in checkbox_names:
-                        editor.set_checkbox(name, form.has(f"check:{name}"))
+                        editor.set_checkbox(RAW_FIELD_PREFIX + name, form.has(f"check:{name}"))
                     if portrait_bytes:
                         editor.set_portrait_image(portrait_bytes, field_name=image_field_name)
                     editor.autosize_text_fields(autosize_mode)
@@ -832,13 +835,13 @@ def build_handler(state: AppState):
                     duration = time.time() - started
                     state.document_revision += 1
                     print(f"[pdf-web] save ok duration={duration:.2f}s")
-                    state.last_message = f"PDF updated successfully in {duration:.2f}s."
+                    state.last_message = f"PDF сохранён за {duration:.2f} с."
             except Exception as exc:
                 print(f"[pdf-web] save failed: {exc}")
                 if not isinstance(exc, (FileConflict, FileNotFoundError)):
                     traceback.print_exc()
                 with state.lock:
-                    state.last_message = f"Save failed: {exc}"
+                    state.last_message = f"Не удалось сохранить PDF: {exc}"
                 self._send_unsaved_form(form, str(exc), HTTPStatus.CONFLICT if isinstance(exc, (FileConflict, FileNotFoundError)) else HTTPStatus.INTERNAL_SERVER_ERROR)
                 return
             finally:
@@ -990,7 +993,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--open-browser",
         action="store_true",
-        help="Open the local editor in the default browser after startup.",
+        help="Open the local editor in Google Chrome after startup (macOS).",
     )
     parser.add_argument(
         "--picker-dir",
@@ -1024,7 +1027,7 @@ def main() -> int:
     print(f"Serving PDF visual editor for {pdf_path}")
     print(f"Open: {url}")
     if args.open_browser:
-        subprocess.Popen(["open", url])
+        subprocess.Popen(["open", "-a", "Google Chrome", url])
     try:
         server.serve_forever()
     except KeyboardInterrupt:

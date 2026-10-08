@@ -28,6 +28,56 @@ from scripts.pdf_form_web_editor import AppState, build_handler  # noqa: E402
 
 
 class PdfFormWebEditorTests(unittest.TestCase):
+    def test_unsupported_choice_field_is_view_only_and_preserved_on_save(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            pdf_path = root / "other-system.pdf"
+            with fitz.open() as document:
+                page = document.new_page()
+                choice = fitz.Widget()
+                choice.field_name = "background"
+                choice.field_type = fitz.PDF_WIDGET_TYPE_COMBOBOX
+                choice.choice_values = ["Scholar", "Traveler"]
+                choice.field_value = "Scholar"
+                choice.rect = fitz.Rect(20, 20, 150, 40)
+                page.add_widget(choice)
+                text = fitz.Widget()
+                text.field_name = "name"
+                text.field_type = fitz.PDF_WIDGET_TYPE_TEXT
+                text.rect = fitz.Rect(20, 60, 150, 80)
+                page.add_widget(text)
+                document.save(pdf_path)
+            server, _ = self._start_server(AppState(pdf_path, root, "filled", 1.0))
+            status, _, page_html = self._request(server, "GET", "/")
+            self.assertEqual(status, 200)
+            self.assertNotIn(b'name="text:background"', page_html)
+            body, content_type = self._multipart_body(
+                {**self._form_tokens(server), "text:name": "New character"}, {},
+            )
+            status, _, _ = self._request(server, "POST", "/save", body, {"Content-Type": content_type})
+            self.assertEqual(status, 303)
+            with fitz.open(pdf_path) as saved:
+                values = {widget.field_name: widget.field_value for widget in saved[0].widgets()}
+                self.assertEqual(values, {"background": "Scholar", "name": "New character"})
+
+    def test_save_keeps_localized_skill_values_in_submitted_raw_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            pdf_path = root / "sheet.pdf"
+            shutil.copy2(ROOT / "templates" / "dnd-5e-2014" / "DnD_5E_CharacterSheet_Form_Fillable_ru.pdf", pdf_path)
+            state = AppState(pdf_path, root, "filled", 1.0)
+            server, _ = self._start_server(state)
+            body, content_type = self._multipart_body(
+                {**self._form_tokens(server), "text:Performance": "+7", "text:History ": "+2"},
+                {},
+            )
+            status, _, _ = self._request(server, "POST", "/save", body, {"Content-Type": content_type})
+            self.assertEqual(status, 303)
+            saved = PdfFormEditor(pdf_path)
+            self.addCleanup(saved.close)
+            self.assertEqual(saved.field_value("raw:Performance"), "+7")
+            self.assertEqual(saved.field_value("raw:History "), "+2")
+
     def _form_tokens(self, server: ThreadingHTTPServer) -> dict[str, str]:
         status, _, payload = self._request(server, "GET", "/")
         self.assertEqual(status, 200)
@@ -169,7 +219,7 @@ class PdfFormWebEditorTests(unittest.TestCase):
 
     def test_index_shows_image_selector_but_not_button_overlays_for_dnd_template(self) -> None:
         state = AppState(
-            pdf_path=(ROOT / "templates" / "DnD_5E_CharacterSheet_Form_Fillable_ru.pdf").resolve(),
+            pdf_path=(ROOT / "templates" / "dnd-5e-2014" / "DnD_5E_CharacterSheet_Form_Fillable_ru.pdf").resolve(),
             picker_root=(ROOT / "templates").resolve(),
             autosize_mode="filled",
             scale=1.0,
@@ -191,7 +241,7 @@ class PdfFormWebEditorTests(unittest.TestCase):
             root = Path(tmp)
             pdf_path = root / "sheet.pdf"
             shutil.copy2(
-                ROOT / "templates" / "DnD_5E_CharacterSheet_Form_Fillable_ru.pdf",
+                ROOT / "templates" / "dnd-5e-2014" / "DnD_5E_CharacterSheet_Form_Fillable_ru.pdf",
                 pdf_path,
             )
 
@@ -234,7 +284,7 @@ class PdfFormWebEditorTests(unittest.TestCase):
             self.assertEqual(status, 303)
             self.assertEqual(headers.get("Location"), "/")
             self.assertEqual(state.document_revision, 1)
-            self.assertIn("updated successfully", state.last_message)
+            self.assertIn("PDF сохранён", state.last_message)
 
             saved = PdfFormEditor(pdf_path)
             self.addCleanup(saved.close)

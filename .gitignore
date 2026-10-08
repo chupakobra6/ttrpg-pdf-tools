@@ -7,6 +7,7 @@ __pycache__/
 .tmp_*
 .bak_*
 .autosized/
+work/
 
 # Local templates for private work.
 templates/local/*
