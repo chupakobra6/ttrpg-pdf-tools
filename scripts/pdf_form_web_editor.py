@@ -104,7 +104,7 @@ def html_page(title: str, body: str) -> bytes:
       --line: #d7c5af;
       --accent: #7f3119;
       --accent-2: #564235;
-      --field: #fff;
+      --field: rgba(255,255,255,0.82);
       --field-border: rgba(120, 80, 50, 0.28);
     }}
     * {{ box-sizing: border-box; }}
@@ -251,7 +251,7 @@ def html_page(title: str, body: str) -> bytes:
       margin: 0;
       padding: 0;
       border: 1px solid var(--field-border);
-      background: var(--field);
+      background: rgba(255,255,255,0.58);
       color: #17120d;
       border-radius: 4px;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.32);
@@ -260,7 +260,7 @@ def html_page(title: str, body: str) -> bytes:
     }}
     .field:focus {{
       outline: 2px solid rgba(127, 49, 25, 0.45);
-      background: var(--field);
+      background: rgba(255,255,255,0.95);
       z-index: 5;
     }}
     .field.text {{
@@ -274,7 +274,7 @@ def html_page(title: str, body: str) -> bytes:
     }}
     .field.checkbox {{
       appearance: none;
-      background: var(--field);
+      background: rgba(255,255,255,0.7);
     }}
     .field.checkbox::after {{
       content: "";
@@ -286,7 +286,7 @@ def html_page(title: str, body: str) -> bytes:
       background:
         linear-gradient(135deg, transparent 40%, #1b1712 40%, #1b1712 53%, transparent 53%),
         linear-gradient(45deg, transparent 58%, #1b1712 58%, #1b1712 71%, transparent 71%),
-        var(--field);
+        rgba(255,255,255,0.92);
     }}
     .legend {{
       position: fixed;
