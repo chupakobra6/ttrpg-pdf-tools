@@ -12,8 +12,10 @@ import fitz
 
 if __package__:
     from .pdf_file_state import FileConflict, file_version, publish, read_snapshot
+    from .template_profiles import PROJECT_ROOT, FormProfile, detect_profile, load_profiles
 else:
     from pdf_file_state import FileConflict, file_version, publish, read_snapshot
+    from template_profiles import PROJECT_ROOT, FormProfile, detect_profile, load_profiles
 
 MIN_FONT_SIZE = 4.0
 MAX_FONT_SIZE = 36.0
@@ -38,33 +40,6 @@ FIELD_REF_PATTERN = re.compile(r"(\d+)\s+0\s+R")
 DA_PATTERN = re.compile(
     r"^(?P<prefix>.*?)(?P<font>/\S+)\s+(?P<size>[0-9]+(?:\.[0-9]+)?)\s+Tf(?P<suffix>.*)$"
 )
-COMPACT_ROW_FONT_PATTERNS = (
-    re.compile(r"^att_(str|dex|con|int|wis|cha)$"),
-    re.compile(r"^def_armor_(dexorcap|prof|item)$"),
-    re.compile(r"^def_armor_penalty$"),
-    re.compile(r"^save_(fort|reflex|will)_(prof_calc|item)$"),
-    re.compile(r"^perception_(prof_calc|item)$"),
-    re.compile(r"^skill_[a-z0-9]+_(prof_calc|item)$"),
-    re.compile(r"^weapon_(melee|range)[0-9]+_(strordex|prof|item)$"),
-    re.compile(r"^class_dc_(key|prof|item)$"),
-    re.compile(r"^spell_stat_(attack_prof_calc|dc_prof_calc|key)$"),
-)
-EQUAL_FONT_GROUP_PATTERNS = (
-    ("save_totals", re.compile(r"^save_(fort|reflex|will)$")),
-    (
-        "skill_totals",
-        re.compile(
-            r"^skill_(acrobatics|arcana|athletics|crafting|deception|diplomacy|"
-            r"intimidation|lore1|lore2|medicine|nature|occultism|performance|"
-            r"religion|society|stealth|survival|thievery)$"
-        ),
-    ),
-)
-DEFAULT_IMAGE_FIELD_CANDIDATES = (
-    "character_portrait_af_image",
-    "CHARACTER IMAGE",
-    "Faction Symbol Image",
-)
 UNSUPPORTED_PDF_GLYPH_MAP = str.maketrans({
     "—": "-",
     "–": "-",
@@ -88,111 +63,6 @@ UNSUPPORTED_PDF_GLYPH_MAP = str.maketrans({
 
 RAW_FIELD_PREFIX = "raw:"
 SKILL_PROFICIENCY_PREFIX = "skill_prof:"
-DND5E_2014_RU_PROFILE = "dnd5e_2014_ru_localized"
-DND2024_RU_PROFILE = "dnd2024_ru_anonymous_fields"
-DND5E_2014_RU_MARKERS = (
-    "Анализ",
-    "Внимательность",
-    "Уход за животными",
-)
-DND2024_RU_MARKERS = (
-    "ГЕРОИЧЕСКОЕ",
-    "БОЕВЫЕ ЗАГОВОРЫ",
-    "Тайная магия",
-)
-DND5E_2014_RU_SKILL_TEXT_MAP = {
-    "Acrobatics": "Acrobatics",
-    "Animal": "Survival",
-    "Arcana": "Medicine",
-    "Athletics": "Arcana",
-    "Deception": "Perception ",
-    "Deception ": "Perception ",
-    "History": "Intimidation",
-    "History ": "Intimidation",
-    "Insight": "Persuasion",
-    "Intimidation": "Insight",
-    "Investigation": "Animal",
-    "Investigation ": "Animal",
-    "Medicine": "Nature",
-    "Nature": "Performance",
-    "Perception": "Athletics",
-    "Perception ": "Athletics",
-    "Performance": "History ",
-    "Persuasion": "Stealth ",
-    "Religion": "Religion",
-    "SleightofHand": "Investigation ",
-    "Stealth": "SleightofHand",
-    "Stealth ": "SleightofHand",
-    "Survival": "Deception ",
-}
-DND5E_2014_RU_SKILL_CHECKBOX_MAP = {
-    "Acrobatics": "Check Box 23",
-    "Animal": "Check Box 40",
-    "Arcana": "Check Box 32",
-    "Athletics": "Check Box 25",
-    "Deception": "Check Box 34",
-    "History": "Check Box 30",
-    "Insight": "Check Box 36",
-    "Intimidation": "Check Box 29",
-    "Investigation": "Check Box 24",
-    "Medicine": "Check Box 33",
-    "Nature": "Check Box 35",
-    "Perception": "Check Box 26",
-    "Performance": "Check Box 28",
-    "Persuasion": "Check Box 39",
-    "Religion": "Check Box 37",
-    "SleightofHand": "Check Box 31",
-    "Stealth": "Check Box 38",
-    "Survival": "Check Box 27",
-}
-DND2024_RU_SKILL_TEXT_MAP = {
-    "Acrobatics": "text_69srmm",
-    "Animal": "text_67cr",
-    "Arcana": "text_59mfqs",
-    "Athletics": "text_61knsn",
-    "Deception": "text_76vfsc",
-    "History": "text_55nptn",
-    "Insight": "text_66djlf",
-    "Intimidation": "text_75pauh",
-    "Investigation": "text_57bjob",
-    "Medicine": "text_65hnhb",
-    "Nature": "text_56ksru",
-    "Perception": "text_63uhiv",
-    "Performance": "text_74rkfi",
-    "Persuasion": "text_77nads",
-    "Religion": "text_58zoel",
-    "SleightofHand": "text_70obrk",
-    "Stealth": "text_71pflk",
-    "Survival": "text_64odvk",
-}
-DND2024_RU_SKILL_CHECKBOX_MAP = {
-    "Acrobatics": "checkbox_128cefr",
-    "Animal": "checkbox_250mjvi",
-    "Arcana": "checkbox_124zscb",
-    "Athletics": "checkbox_126dqaq",
-    "Deception": "checkbox_254ypds",
-    "History": "checkbox_120drb",
-    "Insight": "checkbox_249voxf",
-    "Intimidation": "checkbox_253mbyq",
-    "Investigation": "checkbox_122zffm",
-    "Medicine": "checkbox_248scbg",
-    "Nature": "checkbox_121xgrv",
-    "Perception": "checkbox_246hqns",
-    "Performance": "checkbox_252naxc",
-    "Persuasion": "checkbox_255ltdr",
-    "Religion": "checkbox_123smy",
-    "SleightofHand": "checkbox_129tlov",
-    "Stealth": "checkbox_130ukqx",
-    "Survival": "checkbox_247lffe",
-}
-SKILL_TEXT_MAPS = {
-    DND5E_2014_RU_PROFILE: DND5E_2014_RU_SKILL_TEXT_MAP,
-    DND2024_RU_PROFILE: DND2024_RU_SKILL_TEXT_MAP,
-}
-SKILL_CHECKBOX_MAPS = {
-    DND5E_2014_RU_PROFILE: DND5E_2014_RU_SKILL_CHECKBOX_MAP,
-    DND2024_RU_PROFILE: DND2024_RU_SKILL_CHECKBOX_MAP,
-}
 
 
 def normalize_text(value: str | None) -> str:
@@ -367,10 +237,11 @@ class FieldInfo:
     y0: float
     x1: float
     y1: float
+    readonly: bool = False
 
 
 class PdfFormEditor:
-    def __init__(self, path: Path | str):
+    def __init__(self, path: Path | str, profile: FormProfile | None = None, *, profile_root: Path = PROJECT_ROOT):
         self.path = Path(path).resolve()
         snapshot = read_snapshot(self.path)
         self.source_version = snapshot.version
@@ -379,7 +250,15 @@ class PdfFormEditor:
         self.widgets_by_name: dict[str, list[WidgetRef]] = defaultdict(list)
         self.field_xrefs_by_name: dict[str, list[int]] = defaultdict(list)
         self._index_fields()
-        self.template_profile = self._detect_template_profile()
+        fields = {name: refs[0].field_type for name, refs in self.widgets_by_name.items()}
+        try:
+            self.profile = profile or detect_profile(fields, self.pages[0].get_text("text") if self.pages else "", load_profiles(profile_root))
+            if self.profile:
+                self.profile.validate_fields(fields)
+            self.template_profile = self.profile.id if self.profile else None
+        except Exception:
+            self.close()
+            raise
         self._set_need_appearances()
 
     def close(self) -> None:
@@ -461,20 +340,6 @@ class PdfFormEditor:
             return
         self.doc.xref_set_key(acro_xref, "NeedAppearances", "true")
 
-    def _detect_template_profile(self) -> str | None:
-        if not self.pages:
-            return None
-        first_page_text = self.pages[0].get_text("text")
-        if {"Acrobatics", "Performance", "Persuasion", "Stealth "}.issubset(
-            self.widgets_by_name
-        ) and all(marker in first_page_text for marker in DND5E_2014_RU_MARKERS):
-            return DND5E_2014_RU_PROFILE
-        if {"text_59mfqs", "text_77nads", "checkbox_255ltdr"}.issubset(
-            self.widgets_by_name
-        ) and all(marker in first_page_text for marker in DND2024_RU_MARKERS):
-            return DND2024_RU_PROFILE
-        return None
-
     def _raw_field_name(self, field_name: str) -> str:
         if field_name.startswith(RAW_FIELD_PREFIX):
             return field_name[len(RAW_FIELD_PREFIX):]
@@ -487,7 +352,7 @@ class PdfFormEditor:
         raw_field_name = self._raw_field_name(field_name)
         if field_name.startswith(RAW_FIELD_PREFIX):
             return raw_field_name
-        skill_map = SKILL_TEXT_MAPS.get(self.template_profile or "")
+        skill_map = self.profile.text_fields if self.profile else {}
         if skill_map:
             mapped = skill_map.get(raw_field_name)
             if mapped:
@@ -498,15 +363,8 @@ class PdfFormEditor:
         raw_field_name = self._raw_field_name(field_name)
         if field_name.startswith(RAW_FIELD_PREFIX):
             return raw_field_name
-        if raw_field_name.startswith(SKILL_PROFICIENCY_PREFIX):
-            skill_name = raw_field_name[len(SKILL_PROFICIENCY_PREFIX):]
-            checkbox_map = SKILL_CHECKBOX_MAPS.get(self.template_profile or "")
-            mapped = None
-            if checkbox_map:
-                mapped = checkbox_map.get(self._normalize_skill_name(skill_name))
-            if mapped:
-                return mapped
-        return raw_field_name
+        checkbox_map = self.profile.checkbox_fields if self.profile else {}
+        return checkbox_map.get(raw_field_name, checkbox_map.get(raw_field_name.rstrip(), raw_field_name))
 
     def _all_xrefs(self, field_name: str) -> list[int]:
         xrefs = {ref.xref for ref in self.widgets_by_name.get(field_name, [])}
@@ -540,6 +398,8 @@ class PdfFormEditor:
         updated = 0
         for field_name, refs in self.widgets_by_name.items():
             widget_ref = refs[0]
+            if any(ref.widget.field_flags & fitz.PDF_FIELD_IS_READ_ONLY for ref in refs):
+                continue
             if widget_ref.field_type == "Text":
                 value = normalize_text(widget_ref.widget.field_value)
                 for xref in self.field_xrefs_by_name.get(field_name, []):
@@ -586,26 +446,36 @@ class PdfFormEditor:
         nominal_size = min(11.0, MULTILINE_MAX_FONT_SIZE)
         return not fits_multiline(normalized, font, nominal_size, width, height)
 
+    def _writable_refs(self, field_name: str, field_type: str) -> list[WidgetRef]:
+        refs = self.widgets_by_name.get(field_name, [])
+        if not refs:
+            raise KeyError(f"Поле не найдено: {field_name}")
+        if any(ref.field_type != field_type for ref in refs):
+            raise ValueError(f"Поле {field_name} должно иметь тип {field_type}")
+        if any(ref.widget.field_flags & fitz.PDF_FIELD_IS_READ_ONLY for ref in refs):
+            raise ValueError(f"Поле доступно только для чтения: {field_name}")
+        return refs
+
     def set_text(self, field_name: str, value: str) -> None:
         field_name = self._resolve_text_field_name(field_name)
+        refs = self._writable_refs(field_name, "Text")
         text = normalize_text(value)
-        for ref in self.widgets_by_name.get(field_name, []):
-            if ref.field_type == "Text":
-                ref.widget.field_value = text
-                ref.widget.update()
+        for ref in refs:
+            ref.widget.field_value = text
+            ref.widget.update()
 
         for xref in self._all_xrefs(field_name):
             self._set_text_xref(xref, text)
 
     def set_checkbox(self, field_name: str, checked: bool) -> None:
         field_name = self._resolve_checkbox_field_name(field_name)
+        refs = self._writable_refs(field_name, "CheckBox")
         on_state = self.checkbox_on_state(field_name)
         target = on_state if checked and on_state else "Off"
 
-        for ref in self.widgets_by_name.get(field_name, []):
-            if ref.field_type == "CheckBox":
-                ref.widget.field_value = target
-                ref.widget.update()
+        for ref in refs:
+            ref.widget.field_value = target
+            ref.widget.update()
 
         for xref in self._all_xrefs(field_name):
             self._set_checkbox_xref(xref, target)
@@ -631,7 +501,7 @@ class PdfFormEditor:
             {
                 field_name
                 for field_name, refs in self.widgets_by_name.items()
-                if any(ref.field_type == "Button" for ref in refs)
+                if all(ref.field_type == "Button" and not ref.widget.field_flags & fitz.PDF_FIELD_IS_READ_ONLY for ref in refs)
             }
         )
 
@@ -639,7 +509,7 @@ class PdfFormEditor:
         button_names = self.button_field_names()
         if not button_names:
             return None
-        for candidate in DEFAULT_IMAGE_FIELD_CANDIDATES:
+        for candidate in self.profile.image_fields if self.profile else ():
             if candidate in button_names:
                 return candidate
         return button_names[0]
@@ -654,12 +524,7 @@ class PdfFormEditor:
         if not target_field_name:
             raise KeyError("No image button field found in PDF form")
 
-        refs = self.widgets_by_name.get(target_field_name, [])
-        if not refs:
-            available = ", ".join(self.button_field_names()) or "<none>"
-            raise KeyError(
-                f"Image field not found: {target_field_name}. Available button fields: {available}"
-            )
+        refs = self._writable_refs(target_field_name, "Button")
 
         ref = refs[0]
         page = self.pages[ref.page_number]
@@ -810,7 +675,7 @@ class PdfFormEditor:
     def normalize_compact_row_fonts(self) -> int:
         refs_by_page: dict[int, list[tuple[float, WidgetRef]]] = defaultdict(list)
         for field_name, refs in self.widgets_by_name.items():
-            if not any(pattern.match(field_name) for pattern in COMPACT_ROW_FONT_PATTERNS):
+            if not any(pattern.match(field_name) for pattern in (self.profile.compact_rows if self.profile else ())):
                 continue
             for text_ref in (ref for ref in refs if ref.field_type == "Text"):
                 page_number = text_ref.page_number
@@ -846,7 +711,7 @@ class PdfFormEditor:
             text_ref = next((ref for ref in refs if ref.field_type == "Text"), None)
             if text_ref is None:
                 continue
-            for group_name, pattern in EQUAL_FONT_GROUP_PATTERNS:
+            for group_name, pattern in (self.profile.equal_font_groups.items() if self.profile else ()):
                 if pattern.match(field_name):
                     grouped_refs[(text_ref.page_number, group_name)].append(text_ref)
                     break
@@ -865,6 +730,8 @@ class PdfFormEditor:
 
     def _apply_text_widget_font_size(self, ref: WidgetRef, size: float) -> int:
         widget = ref.widget
+        if widget.field_flags & fitz.PDF_FIELD_IS_READ_ONLY:
+            return 0
         current_size = float(getattr(widget, "text_fontsize", 0.0) or 0.0)
         if abs(current_size - size) < 0.05:
             return 0
@@ -921,6 +788,7 @@ class PdfFormEditor:
                         y0=ref.y0,
                         x1=ref.x1,
                         y1=ref.y1,
+                        readonly=bool(ref.widget.field_flags & fitz.PDF_FIELD_IS_READ_ONLY),
                     )
                 )
         return sorted(fields, key=lambda item: (item.page_number, item.y0, item.x0, item.name))

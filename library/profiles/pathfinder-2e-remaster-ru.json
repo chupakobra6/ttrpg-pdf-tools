@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "pathfinder-2e-remaster-ru",
+  "system": "pathfinder-2e",
+  "required_fields": [
+    "ancestry_name",
+    "att_str",
+    "skill_acrobatics"
+  ],
+  "text_markers": [],
+  "text_fields": {},
+  "checkbox_fields": {},
+  "image_fields": [
+    "character_portrait_af_image"
+  ],
+  "compact_rows": [
+    "^att_(str|dex|con|int|wis|cha)$",
+    "^def_armor_(dexorcap|prof|item)$",
+    "^def_armor_penalty$",
+    "^save_(fort|reflex|will)_(prof_calc|item)$",
+    "^perception_(prof_calc|item)$",
+    "^skill_[a-z0-9]+_(prof_calc|item)$",
+    "^weapon_(melee|range)[0-9]+_(strordex|prof|item)$",
+    "^class_dc_(key|prof|item)$",
+    "^spell_stat_(attack_prof_calc|dc_prof_calc|key)$"
+  ],
+  "equal_font_groups": {
+    "save_totals": "^save_(fort|reflex|will)$",
+    "skill_totals": "^skill_(acrobatics|arcana|athletics|crafting|deception|diplomacy|intimidation|lore1|lore2|medicine|nature|occultism|performance|religion|society|stealth|survival|thievery)$"
+  }
+}

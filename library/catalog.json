@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "systems": [
+    {
+      "id": "pathfinder-2e",
+      "name": "Pathfinder 2e"
+    },
+    {
+      "id": "dnd-5e-2014",
+      "name": "D&D 5e 2014"
+    },
+    {
+      "id": "dnd-5e-2024",
+      "name": "D&D 2024"
+    }
+  ],
+  "items": [
+    {
+      "id": "dnd-2014-ru-fillable",
+      "title": "Лист персонажа D&D 5e 2014 RU",
+      "systems": [
+        "dnd-5e-2014"
+      ],
+      "kind": "template",
+      "path": "templates/dnd-5e-2014/DnD_5E_CharacterSheet_Form_Fillable_ru.pdf",
+      "profile": "dnd5e_2014_ru_localized",
+      "capabilities": {
+        "pages": 3,
+        "fields": {
+          "Text": 210,
+          "CheckBox": 122,
+          "Button": 4
+        },
+        "readonly_fields": 0,
+        "sha256": "be016159cff8335133096e6cb4ee7300a137bb73eced56d2183de210c85bda7f"
+      }
+    },
+    {
+      "id": "dnd-2024-ru-fillable",
+      "title": "Лист персонажа D&D 2024 RU",
+      "systems": [
+        "dnd-5e-2024"
+      ],
+      "kind": "template",
+      "path": "templates/dnd-5e-2024/DnD_2024_Character-Sheet-Fillable-RUS.pdf",
+      "profile": "dnd2024_ru_anonymous_fields",
+      "capabilities": {
+        "pages": 2,
+        "fields": {
+          "Text": 249,
+          "CheckBox": 151
+        },
+        "readonly_fields": 0,
+        "sha256": "d3e1d5bd304939f98db440bb136adffad7448e89cf9269c90ea9c5bd15b92223"
+      }
+    },
+    {
+      "id": "dnd-thedas-homebrew",
+      "title": "Тедас / Dragon Age: домашние правила для D&D",
+      "systems": [
+        "dnd-5e-2014",
+        "dnd-5e-2024"
+      ],
+      "kind": "homebrew",
+      "path": "materials/dnd-5e/Хоубрю по драгонаге.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 117,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "ab07b373a704e2e4807c4d60cc4e740c53fb63a77925b1f471a73453263e11d9"
+      }
+    },
+    {
+      "id": "pf2e-ru-a5",
+      "title": "Лист персонажа Pathfinder 2e RU A5",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "template",
+      "path": "templates/pathfinder-2e/CharacterSheetRus_A5.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 7,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "f0b349cdf9acfa53d2453aff91912cbdc51fa3880dbfb6dba3d33c72d6aeaee8"
+      }
+    },
+    {
+      "id": "pf2e-remaster-ru-print",
+      "title": "Лист персонажа Pathfinder 2e Remaster RU для печати",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "template",
+      "path": "templates/pathfinder-2e/RM_CharacterSheetRus.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 4,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "7f741094259e5dd6714b18a0d9cacd7ed3ef0beac46b05c23664995d98750e31"
+      }
+    },
+    {
+      "id": "pf2e-remaster-ru-fillable",
+      "title": "Лист персонажа Pathfinder 2e Remaster RU",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "template",
+      "path": "templates/pathfinder-2e/RM_CharacterSheet_Fillable.pdf",
+      "profile": "pathfinder-2e-remaster-ru",
+      "capabilities": {
+        "pages": 4,
+        "fields": {
+          "Text": 338,
+          "CheckBox": 177,
+          "Button": 2
+        },
+        "readonly_fields": 0,
+        "sha256": "4c948c32f7388f0413b0cb79b57e802727bf1391a5102cf042b116e3b28cd65f"
+      }
+    },
+    {
+      "id": "pf2e-actions-1-4-1",
+      "title": "Памятка действий v1.4.1",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "reference",
+      "path": "materials/pathfinder-2e/action_sheet_RUS v1.4.1 center.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 2,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "004a15436152f8cb6776416dce88a5d4024c67acf2c73f78cbd14f705ad31176"
+      }
+    },
+    {
+      "id": "pf2e-actions-vetal",
+      "title": "Действия в бою, Vetal",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "reference",
+      "path": "materials/pathfinder-2e/actions_sheet_by_vetal.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 3,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "6eeee2a42d7ddc296c3d6afbdee3b56e74b66536c1e47a4984be1c3f0ba42e42"
+      }
+    },
+    {
+      "id": "pf2e-conditions",
+      "title": "Состояния Pathfinder 2e",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "reference",
+      "path": "materials/pathfinder-2e/conditions.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 7,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "6db88376d1c9a8b291ccdc9ec66019a7a1a1d063a3030baab876b3d8b48c1188"
+      }
+    },
+    {
+      "id": "pf2e-conditions-1-0",
+      "title": "Лист состояний v1.0",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "reference",
+      "path": "materials/pathfinder-2e/conditions_1.0_center.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 2,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "1c6343fe75525108fc6456188f55ad4b225664db14ebdf9128fbf7b82625f0c5"
+      }
+    },
+    {
+      "id": "pf2e-adventurer-reference",
+      "title": "Тетрадь искателя v1.0",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "reference",
+      "path": "materials/pathfinder-2e/pathfinder sheet 1.0.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 15,
+        "fields": {},
+        "readonly_fields": 0,
+        "sha256": "2b095f3e7d75b732feace38abd25de8f13d48717d240dc43ca3c7596f4fb212d"
+      }
+    },
+    {
+      "id": "pf2e-fighter",
+      "title": "Воин: развитие и умения",
+      "systems": [
+        "pathfinder-2e"
+      ],
+      "kind": "reference",
+      "path": "materials/pathfinder-2e/Воин.pdf",
+      "profile": null,
+      "capabilities": {
+        "pages": 7,
+        "fields": {
+          "Text": 135
+        },
+        "readonly_fields": 0,
+        "sha256": "e6713bfd1a7910fd0a415c71fe8134bc7b077ab125dea35c7ec8e847497df1d8"
+      }
+    }
+  ]
+}

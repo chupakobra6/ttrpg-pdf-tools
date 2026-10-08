@@ -13,8 +13,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.pdf_form_editor import (  # noqa: E402
-    DND2024_RU_PROFILE,
-    DND5E_2014_RU_PROFILE,
     PdfFormEditor,
     normalize_text,
 )
@@ -79,7 +77,7 @@ class LocalizedDndTemplateTests(unittest.TestCase):
         editor = PdfFormEditor(ROOT / "templates" / "dnd-5e-2014" / "DnD_5E_CharacterSheet_Form_Fillable_ru.pdf")
         self.addCleanup(editor.close)
 
-        self.assertEqual(editor.template_profile, DND5E_2014_RU_PROFILE)
+        self.assertEqual(editor.template_profile, "dnd5e_2014_ru_localized")
 
         editor.set_skill_values({"Performance": "+2"})
         self.assertEqual(editor.field_value("Performance"), "+2")
@@ -101,7 +99,7 @@ class LocalizedDndTemplateTests(unittest.TestCase):
         editor = PdfFormEditor(ROOT / "templates" / "dnd-5e-2024" / "DnD_2024_Character-Sheet-Fillable-RUS.pdf")
         self.addCleanup(editor.close)
 
-        self.assertEqual(editor.template_profile, DND2024_RU_PROFILE)
+        self.assertEqual(editor.template_profile, "dnd2024_ru_anonymous_fields")
 
         editor.set_skill_values({"Persuasion": "+4"})
         self.assertEqual(editor.field_value("Persuasion"), "+4")

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "dnd5e_2014_ru_localized",
+  "system": "dnd-5e-2014",
+  "required_fields": [
+    "Acrobatics",
+    "Performance",
+    "Persuasion",
+    "Stealth "
+  ],
+  "text_markers": [
+    "Анализ",
+    "Внимательность",
+    "Уход за животными"
+  ],
+  "text_fields": {
+    "Acrobatics": "Acrobatics",
+    "Animal": "Survival",
+    "Arcana": "Medicine",
+    "Athletics": "Arcana",
+    "Deception": "Perception ",
+    "Deception ": "Perception ",
+    "History": "Intimidation",
+    "History ": "Intimidation",
+    "Insight": "Persuasion",
+    "Intimidation": "Insight",
+    "Investigation": "Animal",
+    "Investigation ": "Animal",
+    "Medicine": "Nature",
+    "Nature": "Performance",
+    "Perception": "Athletics",
+    "Perception ": "Athletics",
+    "Performance": "History ",
+    "Persuasion": "Stealth ",
+    "Religion": "Religion",
+    "SleightofHand": "Investigation ",
+    "Stealth": "SleightofHand",
+    "Stealth ": "SleightofHand",
+    "Survival": "Deception "
+  },
+  "checkbox_fields": {
+    "skill_prof:Acrobatics": "Check Box 23",
+    "skill_prof:Animal": "Check Box 40",
+    "skill_prof:Arcana": "Check Box 32",
+    "skill_prof:Athletics": "Check Box 25",
+    "skill_prof:Deception": "Check Box 34",
+    "skill_prof:History": "Check Box 30",
+    "skill_prof:Insight": "Check Box 36",
+    "skill_prof:Intimidation": "Check Box 29",
+    "skill_prof:Investigation": "Check Box 24",
+    "skill_prof:Medicine": "Check Box 33",
+    "skill_prof:Nature": "Check Box 35",
+    "skill_prof:Perception": "Check Box 26",
+    "skill_prof:Performance": "Check Box 28",
+    "skill_prof:Persuasion": "Check Box 39",
+    "skill_prof:Religion": "Check Box 37",
+    "skill_prof:SleightofHand": "Check Box 31",
+    "skill_prof:Stealth": "Check Box 38",
+    "skill_prof:Survival": "Check Box 27"
+  },
+  "image_fields": [
+    "CHARACTER IMAGE",
+    "Faction Symbol Image"
+  ],
+  "compact_rows": [],
+  "equal_font_groups": {}
+}

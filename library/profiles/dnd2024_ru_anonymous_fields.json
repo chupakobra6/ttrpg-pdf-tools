@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "dnd2024_ru_anonymous_fields",
+  "system": "dnd-5e-2024",
+  "required_fields": [
+    "text_59mfqs",
+    "text_77nads",
+    "checkbox_255ltdr"
+  ],
+  "text_markers": [
+    "ГЕРОИЧЕСКОЕ",
+    "БОЕВЫЕ ЗАГОВОРЫ",
+    "Тайная магия"
+  ],
+  "text_fields": {
+    "Acrobatics": "text_69srmm",
+    "Animal": "text_67cr",
+    "Arcana": "text_59mfqs",
+    "Athletics": "text_61knsn",
+    "Deception": "text_76vfsc",
+    "History": "text_55nptn",
+    "Insight": "text_66djlf",
+    "Intimidation": "text_75pauh",
+    "Investigation": "text_57bjob",
+    "Medicine": "text_65hnhb",
+    "Nature": "text_56ksru",
+    "Perception": "text_63uhiv",
+    "Performance": "text_74rkfi",
+    "Persuasion": "text_77nads",
+    "Religion": "text_58zoel",
+    "SleightofHand": "text_70obrk",
+    "Stealth": "text_71pflk",
+    "Survival": "text_64odvk"
+  },
+  "checkbox_fields": {
+    "skill_prof:Acrobatics": "checkbox_128cefr",
+    "skill_prof:Animal": "checkbox_250mjvi",
+    "skill_prof:Arcana": "checkbox_124zscb",
+    "skill_prof:Athletics": "checkbox_126dqaq",
+    "skill_prof:Deception": "checkbox_254ypds",
+    "skill_prof:History": "checkbox_120drb",
+    "skill_prof:Insight": "checkbox_249voxf",
+    "skill_prof:Intimidation": "checkbox_253mbyq",
+    "skill_prof:Investigation": "checkbox_122zffm",
+    "skill_prof:Medicine": "checkbox_248scbg",
+    "skill_prof:Nature": "checkbox_121xgrv",
+    "skill_prof:Perception": "checkbox_246hqns",
+    "skill_prof:Performance": "checkbox_252naxc",
+    "skill_prof:Persuasion": "checkbox_255ltdr",
+    "skill_prof:Religion": "checkbox_123smy",
+    "skill_prof:SleightofHand": "checkbox_129tlov",
+    "skill_prof:Stealth": "checkbox_130ukqx",
+    "skill_prof:Survival": "checkbox_247lffe"
+  },
+  "image_fields": [],
+  "compact_rows": [],
+  "equal_font_groups": {}
+}

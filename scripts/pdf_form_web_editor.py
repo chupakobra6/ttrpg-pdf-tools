@@ -22,8 +22,12 @@ import fitz
 
 if __package__:
     from .pdf_form_editor import FieldInfo, FileConflict, PdfFormEditor, RAW_FIELD_PREFIX
+    from .pdf_library import PdfLibrary, PROJECT_ROOT, read_snapshot
+    from .pdf_library_web import render_library
 else:
     from pdf_form_editor import FieldInfo, FileConflict, PdfFormEditor, RAW_FIELD_PREFIX
+    from pdf_library import PdfLibrary, PROJECT_ROOT, read_snapshot
+    from pdf_library_web import render_library
 
 
 DEFAULT_SCALE = 1.35
@@ -38,7 +42,7 @@ class PageSpec:
 
 @dataclass
 class AppState:
-    pdf_path: Path
+    pdf_path: Path | None
     picker_root: Path
     autosize_mode: str
     scale: float
@@ -46,12 +50,14 @@ class AppState:
     document_revision: int = 0
     session_id: str = field(default_factory=lambda: secrets.token_hex(16))
     lock: RLock = field(default_factory=RLock, repr=False)
+    library_root: Path = PROJECT_ROOT
 
 
 @dataclass
 class ParsedForm:
     values: dict[str, list[str]]
     files: dict[str, bytes]
+    filenames: dict[str, str] = field(default_factory=dict)
 
     def getfirst(self, key: str, default: str = "") -> str:
         return self.values.get(key, [default])[0]
@@ -74,6 +80,7 @@ def parse_form_data(handler: BaseHTTPRequestHandler) -> ParsedForm:
     )
     values: dict[str, list[str]] = {}
     files: dict[str, bytes] = {}
+    filenames: dict[str, str] = {}
     for part in message.iter_parts():
         name = part.get_param("name", header="content-disposition")
         if not name:
@@ -82,10 +89,11 @@ def parse_form_data(handler: BaseHTTPRequestHandler) -> ParsedForm:
         filename = part.get_filename()
         if filename:
             files[name] = body
+            filenames[name] = filename
             continue
         charset = part.get_content_charset() or "utf-8"
         values.setdefault(name, []).append(body.decode(charset, errors="replace"))
-    return ParsedForm(values=values, files=files)
+    return ParsedForm(values=values, files=files, filenames=filenames)
 
 
 def html_page(title: str, body: str) -> bytes:
@@ -194,6 +202,17 @@ def html_page(title: str, body: str) -> bytes:
       font-size: 13px;
       word-break: break-all;
     }}
+    [hidden] {{ display: none !important; }}
+    .library-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr)); gap: 16px; }}
+    .library-card h2 {{ font-size: 18px; margin: 12px 0; }}
+    .library-preview {{ width: 100%; height: 220px; object-fit: contain; background: white; }}
+    .library-filters {{ display: flex; gap: 14px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }}
+    .library-filters label, .library-form label {{ display: grid; gap: 6px; }}
+    .library-form {{ display: grid; gap: 14px; margin-top: 16px; }}
+    .library-form fieldset {{ border: 1px solid var(--line); display: grid; gap: 14px; }}
+    .library-add {{ margin-bottom: 18px; }}
+    select, .library-filters input, .library-form input {{ padding: 8px; max-width: 100%; }}
+    summary {{ cursor: pointer; }}
     .entry-list {{
       display: grid;
       gap: 10px;
@@ -468,7 +487,7 @@ def resolve_picker_pdf(root: Path, raw_path: str) -> Path:
 def render_picker(
     picker_root: Path,
     current_dir: Path,
-    current_pdf: Path,
+    current_pdf: Path | None,
     message: str,
 ) -> bytes:
     try:
@@ -521,7 +540,7 @@ def render_picker(
     for pdf_file in pdf_files:
         rel = pdf_file.relative_to(picker_root)
         query = urllib.parse.quote(str(rel))
-        is_current = pdf_file.resolve() == current_pdf.resolve()
+        is_current = current_pdf is not None and pdf_file.resolve() == current_pdf.resolve()
         meta = "Открыт сейчас" if is_current else "PDF"
         action = "Открыт" if is_current else "Выбрать"
         class_name = "btn secondary" if is_current else "btn"
@@ -543,7 +562,7 @@ def render_picker(
       <div class="topbar">
         <div>
           <div class="title">Выбор PDF</div>
-          <div class="meta">Текущий файл: {html.escape(str(current_pdf))}</div>
+          <div class="meta">Текущий файл: {html.escape(str(current_pdf or "Не выбран"))}</div>
         </div>
         <div class="actions">
           <a class="btn secondary" href="/">Назад в редактор</a>
@@ -574,7 +593,7 @@ def overlay_font_size(field: FieldInfo, scale: float, height: float, multiline: 
 
 
 def control_html(field: FieldInfo, scale: float) -> str:
-    if field.field_type not in ("Text", "CheckBox"):
+    if field.readonly or field.field_type not in ("Text", "CheckBox"):
         return ""
 
     left = field.x0 * scale
@@ -678,6 +697,7 @@ def render_index(
           <div class="actions">
             {image_controls}
             <button type="button" class="btn secondary" id="toggle-fields">Скрыть поля</button>
+            <a class="btn secondary" href="/library">Библиотека НРИ</a>
             <a class="btn secondary" href="/choose-pdf">Сменить PDF</a>
             <a class="btn secondary" href="/open-pdf">Открыть PDF</a>
             <button type="submit">Сохранить PDF</button>
@@ -719,7 +739,7 @@ def build_handler(state: AppState):
         def _current_pdf_exists(self) -> bool:
             with state.lock:
                 pdf_path = state.pdf_path
-            return pdf_path.exists() and pdf_path.is_file()
+            return pdf_path is not None and pdf_path.exists() and pdf_path.is_file()
 
         def _redirect(self, location: str) -> None:
             self.send_response(HTTPStatus.SEE_OTHER)
@@ -728,7 +748,7 @@ def build_handler(state: AppState):
 
         def _missing_pdf_message(self, action: str) -> str:
             with state.lock:
-                pdf_name = state.pdf_path.name
+                pdf_name = state.pdf_path.name if state.pdf_path else "PDF не выбран"
             return (
                 f"Текущий PDF недоступен для действия «{action}»: "
                 f"{pdf_name}. Выберите другой файл."
@@ -760,6 +780,9 @@ def build_handler(state: AppState):
         def do_GET(self) -> None:
             parsed = urllib.parse.urlparse(self.path)
             print(f"[pdf-web] GET {parsed.path}")
+            if parsed.path.startswith("/library"):
+                self._library_get(parsed.path, parsed.query)
+                return
             if parsed.path == "/":
                 self._send_index()
                 return
@@ -786,6 +809,9 @@ def build_handler(state: AppState):
         def do_POST(self) -> None:
             parsed = urllib.parse.urlparse(self.path)
             print(f"[pdf-web] POST {parsed.path}")
+            if parsed.path in ("/library/add", "/library/create"):
+                self._library_post(parsed.path)
+                return
             if parsed.path != "/save":
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
@@ -796,6 +822,8 @@ def build_handler(state: AppState):
             editor = None
             try:
                 with state.lock:
+                    if state.pdf_path is None:
+                        raise FileConflict("Выбери PDF в библиотеке перед сохранением")
                     current_pdf_path = state.pdf_path.resolve()
                     current_revision = state.document_revision
                     autosize_mode = state.autosize_mode
@@ -809,13 +837,13 @@ def build_handler(state: AppState):
                     if expected_revision_raw != str(current_revision):
                         raise FileConflict("Форма устарела: файл переключён или изменён в другой вкладке.")
 
-                    editor = PdfFormEditor(current_pdf_path)
+                    editor = PdfFormEditor(current_pdf_path, profile_root=state.library_root)
                     if form.getfirst("expected_file_version") != editor.source_version:
                         raise FileConflict("PDF изменён вне этой формы. Откройте свежую версию и сравните правки.")
                     started = time.time()
                     fields = editor.list_fields()
-                    text_names = sorted({field.name for field in fields if field.field_type == "Text"})
-                    checkbox_names = sorted({field.name for field in fields if field.field_type == "CheckBox"})
+                    text_names = sorted({field.name for field in fields if field.field_type == "Text" and not field.readonly})
+                    checkbox_names = sorted({field.name for field in fields if field.field_type == "CheckBox" and not field.readonly})
                     image_field_name = form.getfirst("image_field_name") or None
                     portrait_bytes = form.files.get("portrait_image", b"")
                     print(
@@ -880,13 +908,78 @@ def build_handler(state: AppState):
             self.end_headers()
             self.wfile.write(content)
 
+        def _respond(self, content: bytes, mime: str = "text/html; charset=utf-8", status: int = HTTPStatus.OK) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(content)
+
+        def _library_get(self, path: str, query: str) -> None:
+            library = PdfLibrary(state.library_root)
+            params = urllib.parse.parse_qs(query)
+            try:
+                if path == "/library":
+                    with state.lock:
+                        message, session = state.last_message, state.session_id
+                    body = render_library(library, params.get("system", [""])[0],
+                                          params.get("kind", [""])[0], params.get("q", [""])[0], message, session)
+                    self._respond(html_page("Библиотека НРИ", body))
+                elif path in ("/library/pdf", "/library/preview"):
+                    item = library.item(params.get("id", [""])[0])
+                    snapshot = read_snapshot(library.resolve_path(item["path"]))
+                    if path == "/library/pdf":
+                        self._respond(snapshot.data, "application/pdf")
+                    else:
+                        with fitz.open(stream=snapshot.data,filetype="pdf") as doc:
+                            page = doc[0]
+                            scale = min(300/page.rect.width, 300/page.rect.height)
+                            content = page.get_pixmap(matrix=fitz.Matrix(scale,scale),alpha=False).tobytes("png")
+                        self._respond(content, "image/png")
+                else:
+                    self.send_error(HTTPStatus.NOT_FOUND)
+            except Exception as exc:
+                body = '<div class="wrap"><p>'+html.escape(str(exc))+'</p><a href="/library">Вернуться в библиотеку</a></div>'
+                self._respond(html_page("Ошибка библиотеки", body), status=HTTPStatus.BAD_REQUEST)
+
+        def _library_post(self, path: str) -> None:
+            form = parse_form_data(self)
+            try:
+                if form.getfirst("session") != state.session_id:
+                    raise FileConflict("Страница библиотеки устарела. Открой её заново.")
+                library = PdfLibrary(state.library_root)
+                if path == "/library/add":
+                    data = form.files.get("pdf", b"")
+                    system = form.getfirst("system")
+                    if system == "new":
+                        system = form.getfirst("new_system").strip()
+                    profile = json.loads(form.files["profile"]) if form.files.get("profile") else None
+                    item = library.add(data, form.filenames.get("pdf", ""), system, form.getfirst("title"),
+                                       form.getfirst("kind"), form.getfirst("system_name"), profile)
+                    with state.lock:
+                        state.last_message = "Добавлен локальный PDF: " + item["title"]
+                    self._redirect("/library?system=" + urllib.parse.quote(system))
+                else:
+                    target = library.create_working_copy(form.getfirst("id"),form.getfirst("copy_id"))
+                    with state.lock:
+                        state.pdf_path = target
+                        state.document_revision += 1
+                        state.last_message = "Открыта рабочая копия: " + target.name
+                    self._redirect("/")
+            except Exception as exc:
+                self._send_unsaved_form(form,str(exc),HTTPStatus.CONFLICT if isinstance(exc,FileConflict) else HTTPStatus.BAD_REQUEST)
+
         def _send_index(self) -> None:
             with state.lock:
                 pdf_path = state.pdf_path
+                if pdf_path is None:
+                    self._redirect("/library")
+                    return
                 if not pdf_path.exists():
                     self._send_picker_for_missing_pdf("открытие редактора")
                     return
-                editor = PdfFormEditor(pdf_path)
+                editor = PdfFormEditor(pdf_path, profile_root=state.library_root)
                 try:
                     pages = [PageSpec(i, page.rect.width, page.rect.height)
                              for i, page in enumerate(editor.doc)]
@@ -950,8 +1043,9 @@ def build_handler(state: AppState):
             with state.lock:
                 pdf_path = state.pdf_path
                 scale = state.scale
-            if not pdf_path.exists():
-                self.send_error(HTTPStatus.NOT_FOUND, self._missing_pdf_message("рендер страницы"))
+            if pdf_path is None or not pdf_path.exists():
+                body = '<div class="wrap"><p>'+html.escape(self._missing_pdf_message("рендер страницы"))+'</p></div>'
+                self._respond(html_page("PDF недоступен",body),status=HTTPStatus.NOT_FOUND)
                 return
             try:
                 page_number = int(path.removeprefix("/page/").removesuffix(".png"))
@@ -975,7 +1069,7 @@ def build_handler(state: AppState):
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Serve a local visual editor for a fillable PDF.")
-    parser.add_argument("input_pdf", type=Path)
+    parser.add_argument("input_pdf", nargs="?", type=Path, help="Working PDF. Without it, start in the library.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8123)
     parser.add_argument(
@@ -1008,7 +1102,7 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     pdf_path = args.input_pdf
-    if not pdf_path.exists():
+    if pdf_path is not None and not pdf_path.is_file():
         parser.error(f"PDF does not exist: {pdf_path}")
     picker_root = args.picker_dir.resolve()
     if not picker_root.exists():
@@ -1017,14 +1111,14 @@ def main() -> int:
         parser.error(f"Picker directory is not a folder: {picker_root}")
 
     state = AppState(
-        pdf_path=pdf_path.resolve(),
+        pdf_path=pdf_path.resolve() if pdf_path else None,
         picker_root=picker_root,
         autosize_mode=args.autosize,
         scale=args.scale,
     )
     server = ThreadingHTTPServer((args.host, args.port), build_handler(state))
-    url = f"http://{args.host}:{args.port}/"
-    print(f"Serving PDF visual editor for {pdf_path}")
+    url = f"http://{args.host}:{args.port}/" + ("" if pdf_path else "library")
+    print(f"Serving PDF visual editor for {pdf_path}" if pdf_path else "Serving NRI PDF library")
     print(f"Open: {url}")
     if args.open_browser:
         subprocess.Popen(["open", "-a", "Google Chrome", url])
