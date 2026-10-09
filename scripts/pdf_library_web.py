@@ -21,7 +21,7 @@ def render_library(library: PdfLibrary, system: str, kind: str, query: str, mess
         identifier = quote(item['id'])
         capabilities = item.get('capabilities',{})
         counts = capabilities.get('fields',{})
-        field_parts = [f'{label}: {counts[name]}' for name,label in (('Text','текст'),('CheckBox','флажки'),('Button','кнопки / изображения')) if counts.get(name)]
+        field_parts = [f'{label}: {counts[name]}' for name,label in (('Text','текст'),('CheckBox','флажки'),('ComboBox','выбор вариантов'),('Button','кнопки / изображения')) if counts.get(name)]
         field_note = ', '.join(field_parts) if field_parts else 'PDF без поддерживаемых полей · просмотр'
         if capabilities.get('readonly_fields'):
             field_note += f" · только чтение: {capabilities['readonly_fields']}"

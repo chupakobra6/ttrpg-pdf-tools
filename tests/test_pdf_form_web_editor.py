@@ -28,7 +28,7 @@ from scripts.pdf_form_web_editor import AppState, build_handler  # noqa: E402
 
 
 class PdfFormWebEditorTests(unittest.TestCase):
-    def test_unsupported_choice_field_is_view_only_and_preserved_on_save(self) -> None:
+    def test_unsupported_list_field_is_view_only_and_preserved_on_save(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             pdf_path = root / "other-system.pdf"
@@ -36,7 +36,7 @@ class PdfFormWebEditorTests(unittest.TestCase):
                 page = document.new_page()
                 choice = fitz.Widget()
                 choice.field_name = "background"
-                choice.field_type = fitz.PDF_WIDGET_TYPE_COMBOBOX
+                choice.field_type = fitz.PDF_WIDGET_TYPE_LISTBOX
                 choice.choice_values = ["Scholar", "Traveler"]
                 choice.field_value = "Scholar"
                 choice.rect = fitz.Rect(20, 20, 150, 40)
@@ -59,6 +59,38 @@ class PdfFormWebEditorTests(unittest.TestCase):
             with fitz.open(pdf_path) as saved:
                 values = {widget.field_name: widget.field_value for widget in saved[0].widgets()}
                 self.assertEqual(values, {"background": "Scholar", "name": "New character"})
+
+    def test_combo_selection_survives_multipart_save_and_invalid_choice(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            pdf_path = root / "armour.pdf"
+            with fitz.open() as document:
+                page = document.new_page()
+                choice = fitz.Widget()
+                choice.field_name = "armour.head"
+                choice.field_type = fitz.PDF_WIDGET_TYPE_COMBOBOX
+                choice.choice_values = ["Обычная", "Панцирь — тяжёлый"]
+                choice.field_value = "Обычная"
+                choice.rect = fitz.Rect(20, 20, 250, 45)
+                page.add_widget(choice)
+                document.save(pdf_path)
+            server, _ = self._start_server(AppState(pdf_path, root, "filled", 1.0))
+            status, _, page_html = self._request(server, "GET", "/")
+            self.assertEqual(status, 200)
+            self.assertIn('name="choice:armour.head"', page_html.decode())
+            self.assertIn('Панцирь — тяжёлый', page_html.decode())
+            for value, expected_status in [("Панцирь — тяжёлый", 303), ("Несуществующая", 500)]:
+                body, content_type = self._multipart_body(
+                    {**self._form_tokens(server), "choice:armour.head": value}, {},
+                )
+                status, _, payload = self._request(server, "POST", "/save", body, {"Content-Type": content_type})
+                self.assertEqual(status, expected_status)
+                with fitz.open(pdf_path) as saved:
+                    page = saved[0]
+                    self.assertEqual(next(page.widgets()).field_value, "Панцирь — тяжёлый")
+                    self.assertIn("Панцирь", page.get_text())
+                if expected_status == 500:
+                    self.assertIn('Несуществующая', payload.decode())
 
     def test_save_keeps_localized_skill_values_in_submitted_raw_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -238,6 +238,9 @@ class FieldInfo:
     x1: float
     y1: float
     readonly: bool = False
+    choices: tuple[str, ...] = ()
+    max_length: int = 0
+    single_line: bool = False
 
 
 class PdfFormEditor:
@@ -400,8 +403,10 @@ class PdfFormEditor:
             widget_ref = refs[0]
             if any(ref.widget.field_flags & fitz.PDF_FIELD_IS_READ_ONLY for ref in refs):
                 continue
-            if widget_ref.field_type == "Text":
-                value = normalize_text(widget_ref.widget.field_value)
+            if widget_ref.field_type in ("Text", "ComboBox"):
+                value = str(widget_ref.widget.field_value or "")
+                if widget_ref.field_type == "Text":
+                    value = normalize_text(value)
                 for xref in self.field_xrefs_by_name.get(field_name, []):
                     self._set_text_xref(xref, value)
                     updated += 1
@@ -460,12 +465,26 @@ class PdfFormEditor:
         field_name = self._resolve_text_field_name(field_name)
         refs = self._writable_refs(field_name, "Text")
         text = normalize_text(value)
+        if any(ref.widget.text_maxlen and len(text) > ref.widget.text_maxlen for ref in refs):
+            raise ValueError(f"Текст превышает длину поля: {field_name}")
         for ref in refs:
             ref.widget.field_value = text
             ref.widget.update()
 
         for xref in self._all_xrefs(field_name):
             self._set_text_xref(xref, text)
+
+    def set_choice(self, field_name: str, value: str) -> None:
+        field_name = self._raw_field_name(field_name)
+        refs = self._writable_refs(field_name, "ComboBox")
+        # PDF choices are exact values: do not normalize punctuation in them.
+        if value and any(value not in (ref.widget.choice_values or ()) for ref in refs):
+            raise ValueError(f"Недопустимый вариант поля {field_name}: {value}")
+        for ref in refs:
+            ref.widget.field_value = value
+            ref.widget.update()
+        for xref in self._all_xrefs(field_name):
+            self._set_text_xref(xref, value)
 
     def set_checkbox(self, field_name: str, checked: bool) -> None:
         field_name = self._resolve_checkbox_field_name(field_name)
@@ -579,7 +598,10 @@ class PdfFormEditor:
         rect = widget.rect
         font = build_font(getattr(widget, "text_font", None))
         normalized = normalize_text(text)
-        multiline = "\n" in normalized or rect.height >= MULTILINE_HEIGHT_THRESHOLD
+        single_line = widget.text_maxlen == 1 or widget.field_flags & fitz.PDF_TX_FIELD_IS_COMB
+        multiline = not single_line and (
+            "\n" in normalized or rect.height >= MULTILINE_HEIGHT_THRESHOLD
+        )
         if multiline:
             conservative = self._should_use_conservative_multiline_layout(
                 font,
@@ -760,8 +782,9 @@ class PdfFormEditor:
     def field_value(self, field_name: str) -> str:
         field_name = self._resolve_text_field_name(field_name)
         for ref in self.widgets_by_name.get(field_name, []):
-            if ref.field_type == "Text":
-                return normalize_text(ref.widget.field_value)
+            if ref.field_type in ("Text", "ComboBox"):
+                value = str(ref.widget.field_value or "")
+                return normalize_text(value) if ref.field_type == "Text" else value
         return ""
 
     def checkbox_checked(self, field_name: str) -> bool:
@@ -789,6 +812,9 @@ class PdfFormEditor:
                         x1=ref.x1,
                         y1=ref.y1,
                         readonly=bool(ref.widget.field_flags & fitz.PDF_FIELD_IS_READ_ONLY),
+                        choices=tuple(ref.widget.choice_values or ()) if ref.field_type == "ComboBox" else (),
+                        max_length=int(ref.widget.text_maxlen or 0),
+                        single_line=bool(ref.widget.text_maxlen == 1 or ref.widget.field_flags & fitz.PDF_TX_FIELD_IS_COMB),
                     )
                 )
         return sorted(fields, key=lambda item: (item.page_number, item.y0, item.x0, item.name))

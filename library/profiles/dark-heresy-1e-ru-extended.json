@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "dark-heresy-1e-ru-extended",
+  "system": "dark-heresy-1e",
+  "required_fields": [
+    "fill_1",
+    "fill_8",
+    "fill_62.0.0.0.0",
+    "fill_62.1.1.1.1.1",
+    "Dropdown1.0.0",
+    "fill_1_4.0"
+  ],
+  "text_markers": [
+    "Dark Heresy",
+    "Предсказание",
+    "ПРЕДЕЛ"
+  ],
+  "text_fields": {
+    "character_name": "fill_1",
+    "player_name": "fill_2",
+    "career": "fill_3",
+    "rank": "fill_4",
+    "homeworld": "fill_5",
+    "feature": "fill_6",
+    "divination": "fill_7",
+    "ordo": "fill_8",
+    "description": "fill_9",
+    "description_line_2": "fill_10",
+    "description_line_3": "fill_11",
+    "weapon_skill_tens": "fill_62.0.0.0.0",
+    "weapon_skill_units": "fill_62.1.0.0.0",
+    "ballistic_skill_tens": "fill_62.0.1.0.0",
+    "ballistic_skill_units": "fill_62.1.1.0.0",
+    "strength_tens": "fill_62.0.0.1.0",
+    "strength_units": "fill_62.1.0.1.0",
+    "toughness_tens": "fill_62.0.1.1.0",
+    "toughness_units": "fill_62.1.1.1.0",
+    "agility_tens": "fill_62.0.0.0.1",
+    "agility_units": "fill_62.1.0.0.1",
+    "intelligence_tens": "fill_62.0.1.0.1",
+    "intelligence_units": "fill_62.1.1.0.1",
+    "perception_tens": "fill_62.0.0.1.1",
+    "perception_units": "fill_62.1.0.1.1",
+    "willpower_tens": "fill_62.0.1.1.1.0",
+    "willpower_units": "fill_62.1.1.1.1.0",
+    "fellowship_tens": "fill_62.0.1.1.1.1",
+    "fellowship_units": "fill_62.1.1.1.1.1"
+  },
+  "checkbox_fields": {},
+  "image_fields": [],
+  "compact_rows": [],
+  "equal_font_groups": {}
+}

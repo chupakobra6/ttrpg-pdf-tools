@@ -593,7 +593,7 @@ def overlay_font_size(field: FieldInfo, scale: float, height: float, multiline: 
 
 
 def control_html(field: FieldInfo, scale: float) -> str:
-    if field.readonly or field.field_type not in ("Text", "CheckBox"):
+    if field.readonly or field.field_type not in ("Text", "CheckBox", "ComboBox"):
         return ""
 
     left = field.x0 * scale
@@ -601,7 +601,7 @@ def control_html(field: FieldInfo, scale: float) -> str:
     width = max(8.0, (field.x1 - field.x0) * scale)
     height = max(8.0, (field.y1 - field.y0) * scale)
     title = html.escape(field.name)
-    multiline = "\n" in field.value or height > 24
+    multiline = not field.single_line and ("\n" in field.value or height > 24)
     font_size = overlay_font_size(field, scale, height, multiline)
     style = (
         f"left:{left:.1f}px;top:{top:.1f}px;width:{width:.1f}px;height:{height:.1f}px;"
@@ -615,17 +615,29 @@ def control_html(field: FieldInfo, scale: float) -> str:
             f'style="{style}" value="on"{checked}>'
         )
 
+    if field.field_type == "ComboBox":
+        options = ''.join(
+            f'<option value="{html.escape(value, quote=True)}"'
+            f'{" selected" if value == field.value else ""}>{html.escape(value) or "—"}</option>'
+            for value in ("", *field.choices)
+        )
+        return (
+            f'<select class="field text" name="choice:{title}" '
+            f'data-sync-name="choice:{title}" title="{title}" style="{style}">{options}</select>'
+        )
+
     value = html.escape(field.value)
+    max_length = f' maxlength="{field.max_length}"' if field.max_length else ""
     if multiline:
         return (
             f'<textarea class="field text multiline" '
             f'name="text:{title}" data-sync-name="text:{title}" title="{title}" '
-            f'style="{style}">{value}</textarea>'
+            f'style="{style}"{max_length}>{value}</textarea>'
         )
     return (
         f'<input class="field text" type="text" '
         f'name="text:{title}" data-sync-name="text:{title}" title="{title}" '
-        f'style="{style}" value="{value}">'
+        f'style="{style}" value="{value}"{max_length}>'
     )
 
 
@@ -705,7 +717,7 @@ def render_index(
         </div>
         {status_html}
         <div class="hintbar">
-          Редактируй текст и флажки поверх страницы и нажми «Сохранить PDF». Изображения загружаются через панель сверху, если шаблон содержит поле изображения. Печатный фон и остальные типы полей доступны для просмотра.
+          Редактируй текст, флажки и варианты в списках поверх страницы и нажми «Сохранить PDF». Изображения загружаются через панель сверху, если шаблон содержит поле изображения. Печатный фон и остальные типы полей доступны для просмотра.
         </div>
         <div class="pages">
           {''.join(page_blocks)}
@@ -844,6 +856,7 @@ def build_handler(state: AppState):
                     fields = editor.list_fields()
                     text_names = sorted({field.name for field in fields if field.field_type == "Text" and not field.readonly})
                     checkbox_names = sorted({field.name for field in fields if field.field_type == "CheckBox" and not field.readonly})
+                    choice_names = sorted({field.name for field in fields if field.field_type == "ComboBox" and not field.readonly})
                     image_field_name = form.getfirst("image_field_name") or None
                     portrait_bytes = form.files.get("portrait_image", b"")
                     print(
@@ -856,6 +869,10 @@ def build_handler(state: AppState):
                         editor.set_text(RAW_FIELD_PREFIX + name, form.getfirst(f"text:{name}", ""))
                     for name in checkbox_names:
                         editor.set_checkbox(RAW_FIELD_PREFIX + name, form.has(f"check:{name}"))
+                    for name in choice_names:
+                        # Preserve a choice omitted by a partial/programmatic submission.
+                        if form.has(f"choice:{name}"):
+                            editor.set_choice(RAW_FIELD_PREFIX + name, form.getfirst(f"choice:{name}"))
                     if portrait_bytes:
                         editor.set_portrait_image(portrait_bytes, field_name=image_field_name)
                     editor.autosize_text_fields(autosize_mode)

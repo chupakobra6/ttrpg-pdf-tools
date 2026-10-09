@@ -27,6 +27,37 @@ class NormalizeTextTests(unittest.TestCase):
 
 
 class GenericTtrpgFormTests(unittest.TestCase):
+    def test_single_digit_field_keeps_large_font_and_enforces_length(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "digits.pdf"
+            with fitz.open() as document:
+                page = document.new_page()
+                widget = fitz.Widget()
+                widget.field_name = "score.tens"
+                widget.field_type = fitz.PDF_WIDGET_TYPE_TEXT
+                widget.rect = fitz.Rect(20, 30, 45, 59)
+                widget.text_maxlen = 1
+                widget.field_value = "2"
+                widget.text_fontsize = 30
+                page.add_widget(widget)
+                document.save(source)
+            editor = PdfFormEditor(source)
+            try:
+                editor.set_text("score.tens", "3")
+                with self.assertRaisesRegex(ValueError, "длину поля"):
+                    editor.set_text("score.tens", "35")
+                editor.autosize_text_fields("filled")
+                editor.save()
+            finally:
+                editor.close()
+            with fitz.open(source) as saved:
+                page = saved[0]
+                widget = next(page.widgets())
+                self.assertEqual(widget.field_value, "3")
+                self.assertEqual(widget.text_maxlen, 1)
+                self.assertGreater(widget.text_fontsize, 20)
+                self.assertIn("3", page.get_text())
+
     def test_other_system_form_roundtrips_without_dnd_skill_mapping(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "other-system.pdf"
